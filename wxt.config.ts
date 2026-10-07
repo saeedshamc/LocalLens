@@ -11,17 +11,25 @@ export default defineConfig({
     name: 'LocalLens',
     description:
       'Translate pages and chat about their content using a local Ollama server. Fully offline and private.',
-    permissions: ['storage', 'tabs', 'activeTab'],
+    permissions: ['storage', 'tabs', 'activeTab', 'contextMenus', 'sidePanel'],
     host_permissions: [
       'http://localhost:11434/*',
       'http://127.0.0.1:11434/*',
     ],
-
     icons: {
       16: 'icon/16.png',
       32: 'icon/32.png',
       48: 'icon/48.png',
       128: 'icon/128.png',
+    },
+    commands: {
+      'toggle-picker': {
+        suggested_key: {
+          default: 'Alt+Shift+L',
+          mac: 'Alt+Shift+L',
+        },
+        description: 'Toggle LocalLens element picker',
+      },
     },
   },
   hooks: {
@@ -32,4 +40,3 @@ export default defineConfig({
     },
   },
 });
-

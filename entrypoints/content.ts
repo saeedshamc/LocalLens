@@ -4,7 +4,12 @@ import {
   restoreOriginals,
   type CollectableTextNode,
 } from '../lib/translate/dom';
-import type { ContentRequest, ContentResponse, ExtensionResponse } from '../lib/messaging/types';
+import type {
+  ContentRequest,
+  ContentResponse,
+  ExtensionResponse,
+} from '../lib/messaging/types';
+import { createPickerController } from '../lib/picker/controller';
 import { isRtlLanguage } from '../lib/utils/rtl';
 
 export default defineContentScript({
@@ -15,6 +20,20 @@ export default defineContentScript({
     let busy = false;
     let translated = false;
 
+    const picker = createPickerController({
+      onPick: ({ action, text }) => {
+        void chrome.runtime.sendMessage({
+          type: 'PICKER_RESULT',
+          action,
+          text,
+          url: location.href,
+        });
+      },
+      onCancel: () => {
+        void chrome.runtime.sendMessage({ type: 'PICKER_CANCELLED' });
+      },
+    });
+
     chrome.runtime.onMessage.addListener((message: ContentRequest, _sender, sendResponse) => {
       void handle(message).then(sendResponse);
       return true;
@@ -22,7 +41,28 @@ export default defineContentScript({
 
     async function handle(message: ContentRequest): Promise<ContentResponse> {
       if (message.type === 'GET_STATUS') {
-        return { ok: true, translated, nodeCount: originals?.length ?? 0 };
+        return {
+          ok: true,
+          translated,
+          nodeCount: originals?.length ?? 0,
+          pickerActive: picker.active,
+        };
+      }
+
+      if (message.type === 'START_PICKER') {
+        picker.start();
+        return { ok: true, translated, pickerActive: true };
+      }
+
+      if (message.type === 'STOP_PICKER') {
+        picker.stop();
+        return { ok: true, translated, pickerActive: false };
+      }
+
+      if (message.type === 'TOGGLE_PICKER') {
+        if (picker.active) picker.stop();
+        else picker.start();
+        return { ok: true, translated, pickerActive: picker.active };
       }
 
       if (message.type === 'RESTORE_PAGE') {
@@ -103,7 +143,8 @@ export default defineContentScript({
             fromModel: batchRes.fromModel,
           };
         } catch (error) {
-          const msg = error instanceof Error ? error.message : 'Unexpected translation error.';
+          const msg =
+            error instanceof Error ? error.message : 'Unexpected translation error.';
           return { ok: false, error: msg, kind: 'error' };
         } finally {
           busy = false;

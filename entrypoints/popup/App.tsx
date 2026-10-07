@@ -4,7 +4,7 @@ import {
   buttonSecondaryClassName,
 } from '../../components/Field';
 import { t } from '../../lib/i18n';
-import type { ContentResponse } from '../../lib/messaging/types';
+import type { ContentResponse, ExtensionResponse } from '../../lib/messaging/types';
 import { getSettings } from '../../lib/settings/storage';
 import type { UiLanguage } from '../../lib/settings/types';
 import {
@@ -19,6 +19,7 @@ export function PopupApp() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [translated, setTranslated] = useState(false);
+  const [pickerActive, setPickerActive] = useState(false);
   const [tabId, setTabId] = useState<number | null>(null);
   const [restricted, setRestricted] = useState(false);
 
@@ -41,7 +42,10 @@ export function PopupApp() {
         const res = (await chrome.tabs.sendMessage(tab.id, {
           type: 'GET_STATUS',
         })) as ContentResponse;
-        if (res.ok) setTranslated(res.translated);
+        if (res.ok) {
+          setTranslated(res.translated);
+          setPickerActive(Boolean(res.pickerActive));
+        }
       } catch {
         // Content script may not be injected yet on this navigation.
       }
@@ -81,6 +85,41 @@ export function PopupApp() {
     }
   };
 
+  const togglePicker = async () => {
+    if (tabId === null) return;
+    setBusy(true);
+    setError(null);
+    setStatus(null);
+    try {
+      const res = (await chrome.runtime.sendMessage({
+        type: 'TOGGLE_PICKER',
+        tabId,
+      })) as ExtensionResponse | ContentResponse;
+      if (!res.ok) {
+        setError('error' in res ? res.error : 'Picker failed.');
+        return;
+      }
+      const active = 'pickerActive' in res ? Boolean(res.pickerActive) : false;
+      setPickerActive(active);
+      setStatus(active ? 'Element picker on — click an element (Esc to cancel).' : 'Element picker off.');
+      window.close();
+    } catch {
+      setError('Could not toggle the element picker.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openSidePanel = async () => {
+    if (tabId === null) return;
+    try {
+      await chrome.sidePanel.open({ tabId });
+      window.close();
+    } catch {
+      setError('Could not open the side panel.');
+    }
+  };
+
   return (
     <div
       dir={dir}
@@ -94,7 +133,7 @@ export function PopupApp() {
         <p className="m-0 text-xs font-semibold tracking-wide text-[var(--ll-accent)]">
           LocalLens
         </p>
-        <h1 className="m-0 text-base font-semibold">Page translation</h1>
+        <h1 className="m-0 text-base font-semibold">Page tools</h1>
       </header>
 
       <div className="flex flex-col gap-2">
@@ -114,6 +153,22 @@ export function PopupApp() {
         >
           Restore original
         </button>
+        <button
+          type="button"
+          className={buttonSecondaryClassName}
+          disabled={busy || restricted}
+          onClick={() => void togglePicker()}
+        >
+          {pickerActive ? 'Stop element picker' : 'Pick element'}
+        </button>
+        <button
+          type="button"
+          className={buttonSecondaryClassName}
+          disabled={restricted || tabId === null}
+          onClick={() => void openSidePanel()}
+        >
+          Open side panel
+        </button>
         <a
           className={buttonSecondaryClassName}
           href={chrome.runtime.getURL('/options.html')}
@@ -132,13 +187,17 @@ export function PopupApp() {
         </a>
       </div>
 
+      <p className="mt-3 m-0 text-[11px] text-[var(--ll-muted)]">
+        Shortcut: Alt+Shift+L · Right-click → LocalLens picker · Alt+↑ selects parent
+      </p>
+
       {status ? (
-        <p className="mt-3 m-0 text-xs text-[var(--ll-accent)]" role="status">
+        <p className="mt-2 m-0 text-xs text-[var(--ll-accent)]" role="status">
           {status}
         </p>
       ) : null}
       {error ? (
-        <p className="mt-3 m-0 text-xs text-[var(--ll-danger)]" role="alert">
+        <p className="mt-2 m-0 text-xs text-[var(--ll-danger)]" role="alert">
           {error}
         </p>
       ) : null}
