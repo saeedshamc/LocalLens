@@ -1,10 +1,15 @@
+import { buildChatMessages } from '../lib/chat/prompts';
 import type {
+  ChatPortClientMessage,
+  ChatPortServerMessage,
   ContentEvent,
+  ContentResponse,
   ExtensionRequest,
   ExtensionResponse,
 } from '../lib/messaging/types';
 import { testOllamaConnection } from '../lib/ollama/connection';
 import { OllamaClientError } from '../lib/ollama/client';
+import { streamOllamaChat } from '../lib/ollama/stream';
 import { getSettings } from '../lib/settings/storage';
 import { setPendingElementContext } from '../lib/storage/pending-context';
 import { runElementAction } from '../lib/translate/element-actions';
@@ -15,6 +20,8 @@ import {
 } from '../lib/utils/restricted';
 
 const CONTEXT_MENU_PICKER = 'locallens-toggle-picker';
+
+const chatAbortControllers = new Map<string, AbortController>();
 
 export default defineBackground(() => {
   chrome.runtime.onInstalled.addListener((details) => {
@@ -41,6 +48,19 @@ export default defineBackground(() => {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId !== CONTEXT_MENU_PICKER || !tab?.id) return;
     void togglePickerOnTab(tab.id, tab.url);
+  });
+
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name !== 'locallens-chat') return;
+    port.onMessage.addListener((message: ChatPortClientMessage) => {
+      void handleChatPortMessage(port, message);
+    });
+    port.onDisconnect.addListener(() => {
+      for (const [id, controller] of chatAbortControllers) {
+        controller.abort();
+        chatAbortControllers.delete(id);
+      }
+    });
   });
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -230,3 +250,135 @@ async function handleMessage(
       return { ok: false, error: 'Unknown request.' };
   }
 }
+
+function postChat(
+  port: chrome.runtime.Port,
+  message: ChatPortServerMessage,
+): void {
+  try {
+    port.postMessage(message);
+  } catch {
+    // Port disconnected.
+  }
+}
+
+async function handleChatPortMessage(
+  port: chrome.runtime.Port,
+  message: ChatPortClientMessage,
+): Promise<void> {
+  if (message.type === 'CHAT_CANCEL') {
+    chatAbortControllers.get(message.requestId)?.abort();
+    chatAbortControllers.delete(message.requestId);
+    return;
+  }
+
+  if (message.type !== 'CHAT_START') return;
+
+  const existing = chatAbortControllers.get(message.requestId);
+  existing?.abort();
+
+  const controller = new AbortController();
+  chatAbortControllers.set(message.requestId, controller);
+
+  try {
+    const tab = await chrome.tabs.get(message.tabId);
+    if (isRestrictedUrl(tab.url)) {
+      postChat(port, {
+        type: 'CHAT_ERROR',
+        requestId: message.requestId,
+        error: RESTRICTED_PAGE_MESSAGE,
+      });
+      return;
+    }
+
+    const extracted = (await chrome.tabs.sendMessage(message.tabId, {
+      type: 'EXTRACT_PAGE_TEXT',
+    })) as ContentResponse;
+
+    if (!extracted.ok || extracted.kind !== 'pageText') {
+      postChat(port, {
+        type: 'CHAT_ERROR',
+        requestId: message.requestId,
+        error: !extracted.ok ? extracted.error : 'Failed to extract page text.',
+      });
+      return;
+    }
+
+    const page = extracted.pageText;
+    postChat(port, {
+      type: 'PAGE_META',
+      title: page.title,
+      url: page.url,
+      truncated: page.truncated,
+      chars: page.text.length,
+    });
+
+    const settings = await getSettings();
+    const model = settings.chatModel || settings.translateModel;
+    if (!model) {
+      postChat(port, {
+        type: 'CHAT_ERROR',
+        requestId: message.requestId,
+        error: 'No chat model selected. Open Settings and choose a model.',
+      });
+      return;
+    }
+
+    const messages = buildChatMessages({
+      systemPrompt: settings.systemPromptChat,
+      pageTitle: page.title,
+      pageUrl: page.url,
+      pageText: page.text,
+      elementContext: message.elementContext,
+      question: message.question,
+    });
+
+    const full = await streamOllamaChat({
+      host: settings.ollamaHost,
+      model,
+      messages,
+      options: {
+        temperature: Math.max(settings.temperature, 0.2),
+        num_ctx: settings.numCtx,
+      },
+      keep_alive: settings.keepAlive,
+      signal: controller.signal,
+      onToken: (token) => {
+        postChat(port, {
+          type: 'CHAT_TOKEN',
+          requestId: message.requestId,
+          token,
+        });
+      },
+    });
+
+    postChat(port, {
+      type: 'CHAT_DONE',
+      requestId: message.requestId,
+      full,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      postChat(port, {
+        type: 'CHAT_ERROR',
+        requestId: message.requestId,
+        error: 'Generation stopped.',
+      });
+      return;
+    }
+    const msg =
+      error instanceof OllamaClientError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : 'Chat failed.';
+    postChat(port, {
+      type: 'CHAT_ERROR',
+      requestId: message.requestId,
+      error: msg,
+    });
+  } finally {
+    chatAbortControllers.delete(message.requestId);
+  }
+}
+

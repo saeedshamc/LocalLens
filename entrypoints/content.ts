@@ -1,3 +1,4 @@
+import { extractPageText } from '../lib/extract/page-text';
 import {
   applyTranslations,
   collectTranslatableTextNodes,
@@ -43,6 +44,7 @@ export default defineContentScript({
       if (message.type === 'GET_STATUS') {
         return {
           ok: true,
+          kind: 'status',
           translated,
           nodeCount: originals?.length ?? 0,
           pickerActive: picker.active,
@@ -51,25 +53,52 @@ export default defineContentScript({
 
       if (message.type === 'START_PICKER') {
         picker.start();
-        return { ok: true, translated, pickerActive: true };
+        return { ok: true, kind: 'status', translated, pickerActive: true };
       }
 
       if (message.type === 'STOP_PICKER') {
         picker.stop();
-        return { ok: true, translated, pickerActive: false };
+        return { ok: true, kind: 'status', translated, pickerActive: false };
       }
 
       if (message.type === 'TOGGLE_PICKER') {
         if (picker.active) picker.stop();
         else picker.start();
-        return { ok: true, translated, pickerActive: picker.active };
+        return {
+          ok: true,
+          kind: 'status',
+          translated,
+          pickerActive: picker.active,
+        };
+      }
+
+      if (message.type === 'EXTRACT_PAGE_TEXT') {
+        const extracted = extractPageText();
+        if (!extracted.text.trim()) {
+          return {
+            ok: false,
+            error: 'No readable text found on this page.',
+            kind: 'empty',
+          };
+        }
+        return {
+          ok: true,
+          kind: 'pageText',
+          pageText: {
+            title: extracted.title,
+            text: extracted.text,
+            truncated: extracted.truncated,
+            source: extracted.source,
+            url: location.href,
+          },
+        };
       }
 
       if (message.type === 'RESTORE_PAGE') {
         if (originals) restoreOriginals(originals);
         originals = null;
         translated = false;
-        return { ok: true, translated: false };
+        return { ok: true, kind: 'status', translated: false };
       }
 
       if (message.type === 'TRANSLATE_PAGE') {
@@ -137,6 +166,7 @@ export default defineContentScript({
 
           return {
             ok: true,
+            kind: 'status',
             translated: true,
             nodeCount: nodes.length,
             fromCache: batchRes.fromCache,

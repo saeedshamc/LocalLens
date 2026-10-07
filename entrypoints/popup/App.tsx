@@ -42,7 +42,7 @@ export function PopupApp() {
         const res = (await chrome.tabs.sendMessage(tab.id, {
           type: 'GET_STATUS',
         })) as ContentResponse;
-        if (res.ok) {
+        if (res.ok && res.kind === 'status') {
           setTranslated(res.translated);
           setPickerActive(Boolean(res.pickerActive));
         }
@@ -63,6 +63,10 @@ export function PopupApp() {
       const res = (await chrome.tabs.sendMessage(tabId, { type })) as ContentResponse;
       if (!res.ok) {
         setError(res.error);
+        return;
+      }
+      if (res.kind !== 'status') {
+        setError('Unexpected response from the page.');
         return;
       }
       setTranslated(res.translated);
@@ -99,7 +103,8 @@ export function PopupApp() {
         setError('error' in res ? res.error : 'Picker failed.');
         return;
       }
-      const active = 'pickerActive' in res ? Boolean(res.pickerActive) : false;
+      const active =
+        res.ok && 'pickerActive' in res ? Boolean(res.pickerActive) : false;
       setPickerActive(active);
       setStatus(active ? 'Element picker on — click an element (Esc to cancel).' : 'Element picker off.');
       window.close();

@@ -40,18 +40,53 @@ export type ContentRequest =
   | { type: 'GET_STATUS' }
   | { type: 'START_PICKER' }
   | { type: 'STOP_PICKER' }
-  | { type: 'TOGGLE_PICKER' };
+  | { type: 'TOGGLE_PICKER' }
+  | { type: 'EXTRACT_PAGE_TEXT' };
 
 export type ContentResponse =
   | {
       ok: true;
+      kind: 'status';
       translated: boolean;
       nodeCount?: number;
       fromCache?: number;
       fromModel?: number;
       pickerActive?: boolean;
     }
+  | {
+      ok: true;
+      kind: 'pageText';
+      pageText: {
+        title: string;
+        text: string;
+        truncated: boolean;
+        source: 'readability' | 'body';
+        url: string;
+      };
+    }
   | { ok: false; error: string; kind?: 'restricted' | 'empty' | 'busy' | 'error' };
+
+export type ChatPortClientMessage =
+  | {
+      type: 'CHAT_START';
+      requestId: string;
+      tabId: number;
+      question: string;
+      elementContext?: string;
+    }
+  | { type: 'CHAT_CANCEL'; requestId: string };
+
+export type ChatPortServerMessage =
+  | { type: 'CHAT_TOKEN'; requestId: string; token: string }
+  | { type: 'CHAT_DONE'; requestId: string; full: string }
+  | { type: 'CHAT_ERROR'; requestId: string; error: string }
+  | {
+      type: 'PAGE_META';
+      title: string;
+      url: string;
+      truncated: boolean;
+      chars: number;
+    };
 
 export type ContentEvent =
   | {
