@@ -161,29 +161,55 @@ function isContentEvent(message: unknown): message is ContentEvent {
   return type === 'PICKER_RESULT' || type === 'PICKER_CANCELLED';
 }
 
+async function openSidePanelBestEffort(tabId: number): Promise<void> {
+  try {
+    await chrome.sidePanel.open({ tabId });
+  } catch {
+    // User gesture may already be gone; panel can still be opened from popup.
+  }
+}
+
+function notifyElementResultReady(): void {
+  void chrome.action.setBadgeBackgroundColor({ color: '#0f6e56' });
+  void chrome.action.setBadgeText({ text: '•' });
+}
+
 async function handleContentEvent(
   message: ContentEvent,
   tab: chrome.tabs.Tab | undefined,
 ): Promise<void> {
   if (message.type === 'PICKER_CANCELLED') return;
   if (!tab?.id) return;
+  const tabId = tab.id;
+
+  // Open the panel before any long await — sidePanel.open needs a fresh user gesture.
+  void openSidePanelBestEffort(tabId);
 
   if (message.action === 'ask') {
     await setPendingElementContext({
       text: message.text,
       url: message.url,
-      tabId: tab.id,
+      tabId,
       createdAt: Date.now(),
     });
-    try {
-      await chrome.sidePanel.open({ tabId: tab.id });
-    } catch {
-      // Side panel may be unavailable; context is still stored for later.
-    }
+    notifyElementResultReady();
     return;
   }
 
   const settings = await getSettings();
+
+  // Show a pending preview immediately so the side panel is not empty.
+  await setElementActionResult({
+    action: message.action,
+    text: message.text,
+    url: message.url,
+    tabId,
+    createdAt: Date.now(),
+    result: undefined,
+    error: undefined,
+  });
+  notifyElementResultReady();
+
   try {
     const result = await runElementAction(message.action, message.text, settings);
     const shouldSpeak =
@@ -204,15 +230,11 @@ async function handleContentEvent(
       result,
       text: message.text,
       url: message.url,
-      tabId: tab.id,
+      tabId,
       createdAt: Date.now(),
       spoken: shouldSpeak,
     });
-    try {
-      await chrome.sidePanel.open({ tabId: tab.id });
-    } catch {
-      // ignore
-    }
+    void openSidePanelBestEffort(tabId);
   } catch (error) {
     const latest = await getSettings();
     await setElementActionResult({
@@ -223,14 +245,10 @@ async function handleContentEvent(
           : t(latest.uiLanguage, 'errorElementAction'),
       text: message.text,
       url: message.url,
-      tabId: tab.id,
+      tabId,
       createdAt: Date.now(),
     });
-    try {
-      await chrome.sidePanel.open({ tabId: tab.id });
-    } catch {
-      // ignore
-    }
+    void openSidePanelBestEffort(tabId);
   }
 }
 
@@ -382,6 +400,7 @@ async function handleMessage(
     }
     case 'DISCARD_ELEMENT_RESULT': {
       await clearElementActionResult();
+      void chrome.action.setBadgeText({ text: '' });
       return { ok: true, cleared: true };
     }
     case 'SPEAK_TEXT': {

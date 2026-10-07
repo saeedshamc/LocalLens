@@ -406,10 +406,14 @@ export function SidePanelApp() {
             <p className="m-0 mt-2 text-[var(--ll-danger)]" role="alert">
               {elementResult.error}
             </p>
-          ) : (
+          ) : elementResult.result ? (
             <div className="mt-2 max-h-40 overflow-auto leading-relaxed">
-              {renderSafeChatText(elementResult.result ?? '')}
+              {renderSafeChatText(elementResult.result)}
             </div>
+          ) : (
+            <p className="m-0 mt-2 text-[var(--ll-muted)]" role="status">
+              {t(uiLanguage, 'working')}
+            </p>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
             {(elementResult.action === 'translate' ||

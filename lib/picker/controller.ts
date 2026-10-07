@@ -47,11 +47,25 @@ export function createPickerController(options: PickerControllerOptions): Picker
 
   const onClick = (event: MouseEvent) => {
     if (!active) return;
+
+    // Menu is open: do not swallow clicks on the shadow-DOM action menu,
+    // otherwise its buttons never receive the event (capture listener runs first).
+    if (menu) {
+      const path = event.composedPath();
+      const hitMenu = path.some(
+        (node) =>
+          node instanceof Element && node.id === 'locallens-action-menu',
+      );
+      if (hitMenu) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-
-    if (menu) return;
 
     const el = resolveTargetElement(event) ?? current;
     if (!el) return;

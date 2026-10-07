@@ -78,10 +78,17 @@ export function showActionMenu(options: ActionMenuOptions): ActionMenuHandle {
     button.type = 'button';
     button.setAttribute('role', 'menuitem');
     button.textContent = options.labels[id];
-    button.addEventListener('click', (event) => {
+    // Use pointerup so the picker's capture-phase click handler cannot
+    // race ahead of the menu action (also works for mouse + pen).
+    button.addEventListener('pointerup', (event) => {
       event.preventDefault();
       event.stopPropagation();
       options.onAction(id);
+    });
+    button.addEventListener('click', (event) => {
+      // Prevent host-page navigation/activation if the click still bubbles.
+      event.preventDefault();
+      event.stopPropagation();
     });
     menu.appendChild(button);
   }
