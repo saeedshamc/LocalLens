@@ -27,6 +27,10 @@ function asTranslationMode(value: unknown): Settings['translationMode'] {
   return value === 'overlay' ? 'overlay' : 'replace';
 }
 
+function asBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 /** Normalize partial/unknown storage payloads into a full Settings object. */
 export function normalizeSettings(raw: unknown): Settings {
   const source = isRecord(raw) ? raw : {};
@@ -54,6 +58,16 @@ export function normalizeSettings(raw: unknown): Settings {
       Math.min(20, Math.floor(asNumber(source.chatHistoryTurns, DEFAULT_SETTINGS.chatHistoryTurns))),
     ),
     translationMode: asTranslationMode(source.translationMode),
+    ttsEnabled: asBoolean(source.ttsEnabled, DEFAULT_SETTINGS.ttsEnabled),
+    ttsRate: Math.min(
+      2,
+      Math.max(0.5, asNumber(source.ttsRate, DEFAULT_SETTINGS.ttsRate)),
+    ),
+    autoSpeakReplies: asBoolean(
+      source.autoSpeakReplies,
+      DEFAULT_SETTINGS.autoSpeakReplies,
+    ),
+    sttLang: asString(source.sttLang, DEFAULT_SETTINGS.sttLang),
   };
 }
 

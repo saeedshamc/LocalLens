@@ -17,6 +17,14 @@ export interface Settings {
   uiLanguage: UiLanguage;
   chatHistoryTurns: number;
   translationMode: TranslationMode;
+  /** Use system TTS (chrome.tts) for read-aloud. */
+  ttsEnabled: boolean;
+  /** Speech rate 0.5–2. */
+  ttsRate: number;
+  /** Auto-speak assistant chat replies when streaming finishes. */
+  autoSpeakReplies: boolean;
+  /** BCP-47 or short code for STT; empty = derive from UI language. */
+  sttLang: string;
 }
 
 export type SettingsPatch = Partial<Settings>;

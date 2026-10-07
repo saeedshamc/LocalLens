@@ -31,4 +31,8 @@ export const DEFAULT_SETTINGS: Settings = {
   uiLanguage: 'en',
   chatHistoryTurns: 6,
   translationMode: 'replace',
+  ttsEnabled: true,
+  ttsRate: 1,
+  autoSpeakReplies: false,
+  sttLang: '',
 };

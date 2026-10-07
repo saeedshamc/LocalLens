@@ -19,6 +19,7 @@ export default defineConfig({
       'tabs',
       'activeTab',
       'contextMenus',
+      'tts',
       ...(browser === 'firefox' ? [] : (['sidePanel'] as const)),
     ],
     host_permissions: [
