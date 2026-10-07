@@ -11,11 +11,12 @@ export default defineConfig({
     name: 'LocalLens',
     description:
       'Translate pages and chat about their content using a local Ollama server. Fully offline and private.',
-    permissions: ['storage'],
+    permissions: ['storage', 'tabs', 'activeTab'],
     host_permissions: [
       'http://localhost:11434/*',
       'http://127.0.0.1:11434/*',
     ],
+
     icons: {
       16: 'icon/16.png',
       32: 'icon/32.png',
