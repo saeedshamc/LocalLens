@@ -99,4 +99,26 @@ Record of meaningful choices made during development. Newest entries first withi
 
 ---
 
+## 2026-10-07 — Milestone 0.3.0
+
+### Picker UI in closed Shadow DOM
+
+**Decision:** Render the highlight overlay and action menu inside closed shadow roots attached to `document.documentElement`.
+
+**Why:** Prevents host page CSS from breaking picker chrome; `pointer-events: none` on the highlight keeps hit-testing on the page until click capture handles selection.
+
+### Element action results via side panel + session storage
+
+**Decision:** Store pending ask-context and last element results in `chrome.storage.session`, then open the side panel.
+
+**Why:** Keeps Ollama calls in the background, avoids injecting results into the page DOM, and prepares the side panel for full chat in 0.4.0.
+
+### Default picker shortcut
+
+**Decision:** `Alt+Shift+L` for toggle-picker (`chrome.commands`).
+
+**Why:** Unlikely to collide with common browser shortcuts; remappable at `chrome://extensions/shortcuts`.
+
+---
+
 *Further decisions will be appended as milestones progress.*
