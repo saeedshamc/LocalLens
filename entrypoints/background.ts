@@ -33,6 +33,8 @@ import {
   isRestrictedUrl,
   restrictedPageMessage,
 } from '../lib/utils/restricted';
+import { speechLocaleForRead } from '../lib/voice/lang';
+import { speakText, stopSpeaking } from '../lib/voice/tts';
 
 const CONTEXT_MENU_PICKER = 'locallens-toggle-picker';
 
@@ -183,6 +185,19 @@ async function handleContentEvent(
   const settings = await getSettings();
   try {
     const result = await runElementAction(message.action, message.text, settings);
+    const shouldSpeak =
+      settings.ttsEnabled &&
+      (message.action === 'read' || message.action === 'translateRead');
+    if (shouldSpeak) {
+      const lang = speechLocaleForRead({
+        preferTarget: message.action === 'translateRead',
+        targetLanguage: settings.targetLanguage,
+        uiLanguage: settings.uiLanguage,
+      });
+      void speakText({ text: result, lang, rate: settings.ttsRate }).catch(() => {
+        // TTS failures should not block the panel preview.
+      });
+    }
     await setElementActionResult({
       action: message.action,
       result,
@@ -190,6 +205,7 @@ async function handleContentEvent(
       url: message.url,
       tabId: tab.id,
       createdAt: Date.now(),
+      spoken: shouldSpeak,
     });
     try {
       await chrome.sidePanel.open({ tabId: tab.id });
@@ -197,13 +213,13 @@ async function handleContentEvent(
       // ignore
     }
   } catch (error) {
-    const settings = await getSettings();
+    const latest = await getSettings();
     await setElementActionResult({
       action: message.action,
       error:
         error instanceof Error
           ? error.message
-          : t(settings.uiLanguage, 'errorElementAction'),
+          : t(latest.uiLanguage, 'errorElementAction'),
       text: message.text,
       url: message.url,
       tabId: tab.id,
@@ -355,6 +371,31 @@ async function handleMessage(
     case 'DISCARD_ELEMENT_RESULT': {
       await clearElementActionResult();
       return { ok: true, cleared: true };
+    }
+    case 'SPEAK_TEXT': {
+      const settings = await getSettings();
+      if (!settings.ttsEnabled) {
+        return { ok: false, error: t(settings.uiLanguage, 'ttsDisabled') };
+      }
+      const lang =
+        message.lang?.trim() ||
+        speechLocaleForRead({
+          preferTarget: true,
+          targetLanguage: settings.targetLanguage,
+          uiLanguage: settings.uiLanguage,
+        });
+      void speakText({
+        text: message.text,
+        lang,
+        rate: settings.ttsRate,
+      }).catch(() => {
+        // Spoken feedback is best-effort.
+      });
+      return { ok: true, pong: true };
+    }
+    case 'STOP_SPEAK': {
+      stopSpeaking();
+      return { ok: true, pong: true };
     }
     case 'PING_CONTENT':
       return { ok: true, pong: true };
