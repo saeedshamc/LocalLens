@@ -12,6 +12,7 @@ import type {
   ExtensionResponse,
 } from '../../lib/messaging/types';
 import { getSettings } from '../../lib/settings/storage';
+import type { Settings, UiLanguage } from '../../lib/settings/types';
 import {
   clearChatThread,
   getChatThread,
@@ -27,8 +28,9 @@ import {
   clearPendingElementContext,
   getPendingElementContext,
 } from '../../lib/storage/pending-context';
-import type { UiLanguage } from '../../lib/settings/types';
 import { isRtlLanguage } from '../../lib/utils/rtl';
+import { toSpeechLocale } from '../../lib/voice/lang';
+import { isSpeechRecognitionAvailable, listenOnce } from '../../lib/voice/stt';
 
 interface ChatMessage {
   id: string;
@@ -64,6 +66,7 @@ function toHistory(messages: ChatMessage[]): ChatHistoryMessage[] {
 
 export function SidePanelApp() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>('en');
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [tabId, setTabId] = useState<number | null>(null);
   const [pageUrl, setPageUrl] = useState<string>('');
   const [pageMeta, setPageMeta] = useState<PageMeta | null>(null);
@@ -74,17 +77,22 @@ export function SidePanelApp() {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [streaming, setStreaming] = useState(false);
+  const [listening, setListening] = useState(false);
   const portRef = useRef<chrome.runtime.Port | null>(null);
   const requestIdRef = useRef<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const persistRef = useRef<{ tabId: number; url: string } | null>(null);
+  const settingsRef = useRef<Settings | null>(null);
+  const sttAvailable = isSpeechRecognitionAvailable();
 
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const settings = await getSettings();
+      const loaded = await getSettings();
       if (!alive) return;
-      setUiLanguage(settings.uiLanguage);
+      setSettings(loaded);
+      settingsRef.current = loaded;
+      setUiLanguage(loaded.uiLanguage);
 
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!alive || !tab?.id) return;
@@ -174,18 +182,27 @@ export function SidePanelApp() {
         if (message.requestId !== requestIdRef.current) return;
         setStreaming(false);
         requestIdRef.current = null;
+        const full = message.full;
         setMessages((prev) => {
           const next = [...prev];
           const last = next[next.length - 1];
           if (last?.role === 'assistant') {
             next[next.length - 1] = {
               ...last,
-              content: message.full || last.content,
+              content: full || last.content,
               streaming: false,
             };
           }
           return next;
         });
+        const s = settingsRef.current;
+        if (s?.ttsEnabled && s.autoSpeakReplies && full.trim()) {
+          void chrome.runtime.sendMessage({
+            type: 'SPEAK_TEXT',
+            text: full,
+            lang: toSpeechLocale(s.sttLang || s.uiLanguage),
+          });
+        }
         return;
       }
 
@@ -219,9 +236,9 @@ export function SidePanelApp() {
     portRef.current?.postMessage(message);
   };
 
-  const ask = () => {
-    if (!tabId || !input.trim() || streaming) return;
-    const question = input.trim();
+  const askWithText = (raw: string) => {
+    if (!tabId || !raw.trim() || streaming) return;
+    const question = raw.trim();
     const requestId = newId();
     requestIdRef.current = requestId;
     setInput('');
@@ -251,6 +268,40 @@ export function SidePanelApp() {
       elementContext: elementContext ?? undefined,
       recentMessages: recent,
     });
+  };
+
+  const ask = () => askWithText(input);
+
+  const speak = (text: string, preferTarget = false) => {
+    const s = settingsRef.current;
+    if (!s?.ttsEnabled || !text.trim()) return;
+    void chrome.runtime.sendMessage({
+      type: 'SPEAK_TEXT',
+      text,
+      lang: toSpeechLocale(
+        preferTarget ? s.targetLanguage : s.sttLang || s.uiLanguage,
+      ),
+    });
+  };
+
+  const stopSpeak = () => {
+    void chrome.runtime.sendMessage({ type: 'STOP_SPEAK' });
+  };
+
+  const startVoiceInput = async () => {
+    if (!sttAvailable || listening || streaming || tabId === null) return;
+    setError(null);
+    setListening(true);
+    try {
+      const s = settingsRef.current ?? (await getSettings());
+      const lang = toSpeechLocale(s.sttLang || s.uiLanguage);
+      const { transcript } = await listenOnce({ lang });
+      askWithText(transcript);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t(uiLanguage, 'voiceNotSupported'));
+    } finally {
+      setListening(false);
+    }
   };
 
   const stop = () => {
@@ -361,7 +412,9 @@ export function SidePanelApp() {
             </div>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
-            {elementResult.action === 'translate' && elementResult.result ? (
+            {(elementResult.action === 'translate' ||
+              elementResult.action === 'translateRead') &&
+            elementResult.result ? (
               <button
                 type="button"
                 className={buttonPrimaryClassName}
@@ -386,10 +439,26 @@ export function SidePanelApp() {
                 {t(uiLanguage, 'applyToPage')}
               </button>
             ) : null}
+            {elementResult.result && settings?.ttsEnabled ? (
+              <button
+                type="button"
+                className={buttonSecondaryClassName}
+                onClick={() =>
+                  speak(
+                    elementResult.result ?? '',
+                    elementResult.action === 'translate' ||
+                      elementResult.action === 'translateRead',
+                  )
+                }
+              >
+                {t(uiLanguage, 'speak')}
+              </button>
+            ) : null}
             <button
               type="button"
               className={buttonSecondaryClassName}
               onClick={() => {
+                stopSpeak();
                 void chrome.runtime
                   .sendMessage({ type: 'DISCARD_ELEMENT_RESULT' })
                   .then(() => {
@@ -401,6 +470,11 @@ export function SidePanelApp() {
               {t(uiLanguage, 'discard')}
             </button>
           </div>
+          {elementResult.spoken ? (
+            <p className="m-0 mt-2 text-xs text-[var(--ll-accent)]" role="status">
+              {t(uiLanguage, 'spokeAloud')}
+            </p>
+          ) : null}
           {previewStatus ? (
             <p className="m-0 mt-2 text-xs text-[var(--ll-accent)]" role="status">
               {previewStatus}
@@ -429,6 +503,18 @@ export function SidePanelApp() {
             <div className="leading-relaxed">
               {renderSafeChatText(message.content || ' ')}
             </div>
+            {message.role === 'assistant' &&
+            !message.streaming &&
+            message.content.trim() &&
+            settings?.ttsEnabled ? (
+              <button
+                type="button"
+                className={`${buttonSecondaryClassName} mt-2 py-1 text-xs`}
+                onClick={() => speak(message.content)}
+              >
+                {t(uiLanguage, 'speak')}
+              </button>
+            ) : null}
           </div>
         ))}
       </div>
@@ -456,6 +542,15 @@ export function SidePanelApp() {
               {t(uiLanguage, 'stop')}
             </button>
           ) : null}
+          {settings?.ttsEnabled ? (
+            <button
+              type="button"
+              className={buttonSecondaryClassName}
+              onClick={stopSpeak}
+            >
+              {t(uiLanguage, 'stopSpeak')}
+            </button>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <textarea
@@ -472,14 +567,28 @@ export function SidePanelApp() {
             }}
             disabled={streaming || tabId === null}
           />
-          <button
-            type="button"
-            className={buttonPrimaryClassName}
-            disabled={streaming || !input.trim() || tabId === null}
-            onClick={ask}
-          >
-            {t(uiLanguage, 'send')}
-          </button>
+          <div className="flex flex-col gap-2">
+            {sttAvailable ? (
+              <button
+                type="button"
+                className={buttonSecondaryClassName}
+                disabled={streaming || listening || tabId === null}
+                aria-pressed={listening}
+                aria-busy={listening}
+                onClick={() => void startVoiceInput()}
+              >
+                {listening ? t(uiLanguage, 'listening') : t(uiLanguage, 'voiceInput')}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={buttonPrimaryClassName}
+              disabled={streaming || !input.trim() || tabId === null}
+              onClick={ask}
+            >
+              {t(uiLanguage, 'send')}
+            </button>
+          </div>
         </div>
       </footer>
     </div>
