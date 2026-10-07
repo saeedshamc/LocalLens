@@ -121,4 +121,26 @@ Record of meaningful choices made during development. Newest entries first withi
 
 ---
 
+## 2026-10-07 — Milestone 0.4.0
+
+### Chat streaming over a long-lived port
+
+**Decision:** Side panel connects with `chrome.runtime.connect({ name: 'locallens-chat' })` and receives `CHAT_TOKEN` / `CHAT_DONE` / `CHAT_ERROR` messages; cancel uses `AbortController`.
+
+**Why:** Keeps the MV3 service worker alive for the duration of the stream and supports mid-flight cancellation.
+
+### Long pages in 0.4.0
+
+**Decision:** Truncate extracted page text around 14k characters with an explicit marker; retrieval with embeddings lands in 0.5.0.
+
+**Why:** Delivers working grounded chat immediately without blocking on the embedding pipeline.
+
+### Safe chat rendering
+
+**Decision:** Custom React renderer for newlines, `` `code` ``, and `**bold**` only — no `dangerouslySetInnerHTML`.
+
+**Why:** Meets the no-untrusted-HTML rule with minimal dependency surface.
+
+---
+
 *Further decisions will be appended as milestones progress.*
