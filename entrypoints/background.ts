@@ -13,7 +13,8 @@ import { testOllamaConnection } from '../lib/ollama/connection';
 import { OllamaClientError } from '../lib/ollama/client';
 import { streamOllamaChat } from '../lib/ollama/stream';
 import { retrievePageContext } from '../lib/retrieve/retrieve';
-import { getSettings } from '../lib/settings/storage';
+import { t } from '../lib/i18n';
+import { getSettings, onSettingsChanged } from '../lib/settings/storage';
 import {
   clearAllCaches,
   clearChatHistoryCache,
@@ -29,8 +30,8 @@ import { setPendingElementContext } from '../lib/storage/pending-context';
 import { runElementAction } from '../lib/translate/element-actions';
 import { translateBatch } from '../lib/translate/engine';
 import {
-  RESTRICTED_PAGE_MESSAGE,
   isRestrictedUrl,
+  restrictedPageMessage,
 } from '../lib/utils/restricted';
 
 const CONTEXT_MENU_PICKER = 'locallens-toggle-picker';
@@ -46,6 +47,9 @@ export default defineBackground(() => {
   });
 
   ensureContextMenu();
+  onSettingsChanged(() => {
+    ensureContextMenu();
+  });
 
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {
     // Older Chrome builds may lack sidePanel; ignore.
@@ -100,11 +104,16 @@ export default defineBackground(() => {
     void handleMessage(message as ExtensionRequest, sender.tab)
       .then(sendResponse)
       .catch((error: unknown) => {
-        const response: ExtensionResponse = {
-          ok: false,
-          error: error instanceof Error ? error.message : 'Unexpected background error.',
-        };
-        sendResponse(response);
+        void getSettings().then((settings) => {
+          const response: ExtensionResponse = {
+            ok: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : t(settings.uiLanguage, 'errorUnexpectedBackground'),
+          };
+          sendResponse(response);
+        });
       });
     return true;
   });
@@ -133,10 +142,12 @@ function updateTranslateBadge(done: number, pending: number): void {
 
 function ensureContextMenu(): void {
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: CONTEXT_MENU_PICKER,
-      title: 'LocalLens: Toggle element picker',
-      contexts: ['page', 'selection', 'editable'],
+    void getSettings().then((settings) => {
+      chrome.contextMenus.create({
+        id: CONTEXT_MENU_PICKER,
+        title: t(settings.uiLanguage, 'contextMenuPicker'),
+        contexts: ['page', 'selection', 'editable'],
+      });
     });
   });
 }
@@ -186,9 +197,13 @@ async function handleContentEvent(
       // ignore
     }
   } catch (error) {
+    const settings = await getSettings();
     await setElementActionResult({
       action: message.action,
-      error: error instanceof Error ? error.message : 'Element action failed.',
+      error:
+        error instanceof Error
+          ? error.message
+          : t(settings.uiLanguage, 'errorElementAction'),
       text: message.text,
       url: message.url,
       tabId: tab.id,
@@ -203,8 +218,13 @@ async function handleContentEvent(
 }
 
 async function togglePickerOnTab(tabId: number, url?: string): Promise<ExtensionResponse> {
+  const settings = await getSettings();
   if (isRestrictedUrl(url)) {
-    return { ok: false, error: RESTRICTED_PAGE_MESSAGE, kind: 'restricted' };
+    return {
+      ok: false,
+      error: restrictedPageMessage(settings.uiLanguage),
+      kind: 'restricted',
+    };
   }
   try {
     const res = (await chrome.tabs.sendMessage(tabId, {
@@ -214,8 +234,7 @@ async function togglePickerOnTab(tabId: number, url?: string): Promise<Extension
   } catch {
     return {
       ok: false,
-      error:
-        'Could not reach the page. Reload the tab, then try again. LocalLens cannot run on restricted browser pages.',
+      error: t(settings.uiLanguage, 'reachPageError'),
     };
   }
 }
@@ -250,7 +269,10 @@ async function handleMessage(
         }
         return {
           ok: false,
-          error: error instanceof Error ? error.message : 'Translation failed.',
+          error:
+            error instanceof Error
+              ? error.message
+              : t(settings.uiLanguage, 'errorTranslationFailed'),
         };
       }
     }
@@ -265,7 +287,10 @@ async function handleMessage(
         }
         return {
           ok: false,
-          error: error instanceof Error ? error.message : 'Element action failed.',
+          error:
+            error instanceof Error
+              ? error.message
+              : t(settings.uiLanguage, 'errorElementAction'),
         };
       }
     }
@@ -285,7 +310,10 @@ async function handleMessage(
     }
     case 'TOGGLE_PICKER': {
       const tabId = message.tabId || senderTab?.id;
-      if (!tabId) return { ok: false, error: 'No active tab.' };
+      if (!tabId) {
+        const settings = await getSettings();
+        return { ok: false, error: t(settings.uiLanguage, 'noActiveTab') };
+      }
       const tab = await chrome.tabs.get(tabId);
       return togglePickerOnTab(tabId, tab.url);
     }
@@ -317,9 +345,10 @@ async function handleMessage(
         await clearElementActionResult();
         return { ok: true, applied: true };
       } catch {
+        const settings = await getSettings();
         return {
           ok: false,
-          error: 'Could not apply translation on the page. Reload the tab and try again.',
+          error: t(settings.uiLanguage, 'errorApplyReload'),
         };
       }
     }
@@ -329,8 +358,13 @@ async function handleMessage(
     }
     case 'PING_CONTENT':
       return { ok: true, pong: true };
-    default:
-      return { ok: false, error: 'Unknown request.' };
+    default: {
+      const settings = await getSettings();
+      return {
+        ok: false,
+        error: t(settings.uiLanguage, 'errorUnknownExtensionRequest'),
+      };
+    }
   }
 }
 
@@ -380,7 +414,7 @@ async function handleTranslatePortMessage(
           ? error.message
           : error instanceof Error
             ? error.message
-            : 'Translation failed.',
+            : t(settings.uiLanguage, 'errorTranslationFailed'),
     });
   }
 }
@@ -404,12 +438,13 @@ async function handleChatPortMessage(
   chatAbortControllers.set(message.requestId, controller);
 
   try {
+    const settings = await getSettings();
     const tab = await chrome.tabs.get(message.tabId);
     if (isRestrictedUrl(tab.url)) {
       postChat(port, {
         type: 'CHAT_ERROR',
         requestId: message.requestId,
-        error: RESTRICTED_PAGE_MESSAGE,
+        error: restrictedPageMessage(settings.uiLanguage),
       });
       return;
     }
@@ -422,19 +457,20 @@ async function handleChatPortMessage(
       postChat(port, {
         type: 'CHAT_ERROR',
         requestId: message.requestId,
-        error: !extracted.ok ? extracted.error : 'Failed to extract page text.',
+        error: !extracted.ok
+          ? extracted.error
+          : t(settings.uiLanguage, 'errorExtractPageText'),
       });
       return;
     }
 
     const page = extracted.pageText;
-    const settings = await getSettings();
     const model = settings.chatModel || settings.translateModel;
     if (!model) {
       postChat(port, {
         type: 'CHAT_ERROR',
         requestId: message.requestId,
-        error: 'No chat model selected. Open Settings and choose a model.',
+        error: t(settings.uiLanguage, 'errorNoChatModel'),
       });
       return;
     }
@@ -493,11 +529,12 @@ async function handleChatPortMessage(
       full,
     });
   } catch (error) {
+    const lang = (await getSettings()).uiLanguage;
     if (error instanceof DOMException && error.name === 'AbortError') {
       postChat(port, {
         type: 'CHAT_ERROR',
         requestId: message.requestId,
-        error: 'Generation stopped.',
+        error: t(lang, 'errorGenerationStopped'),
       });
       return;
     }
@@ -506,7 +543,7 @@ async function handleChatPortMessage(
         ? error.message
         : error instanceof Error
           ? error.message
-          : 'Chat failed.';
+          : t(lang, 'errorChatFailed');
     postChat(port, {
       type: 'CHAT_ERROR',
       requestId: message.requestId,
