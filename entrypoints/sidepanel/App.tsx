@@ -11,6 +11,12 @@ import type {
 } from '../../lib/messaging/types';
 import { getSettings } from '../../lib/settings/storage';
 import {
+  clearChatThread,
+  getChatThread,
+  saveChatThread,
+  type ChatHistoryMessage,
+} from '../../lib/storage/chat-history';
+import {
   clearPendingElementContext,
   getPendingElementContext,
 } from '../../lib/storage/pending-context';
@@ -22,6 +28,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   streaming?: boolean;
+  createdAt: number;
 }
 
 interface PageMeta {
@@ -29,15 +36,29 @@ interface PageMeta {
   url: string;
   truncated: boolean;
   chars: number;
+  usedRetrieval?: boolean;
+  selectedChunks?: number;
 }
 
 function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function toHistory(messages: ChatMessage[]): ChatHistoryMessage[] {
+  return messages
+    .filter((m) => !m.streaming)
+    .map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt,
+    }));
+}
+
 export function SidePanelApp() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>('en');
   const [tabId, setTabId] = useState<number | null>(null);
+  const [pageUrl, setPageUrl] = useState<string>('');
   const [pageMeta, setPageMeta] = useState<PageMeta | null>(null);
   const [elementContext, setElementContext] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -47,6 +68,7 @@ export function SidePanelApp() {
   const portRef = useRef<chrome.runtime.Port | null>(null);
   const requestIdRef = useRef<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const persistRef = useRef<{ tabId: number; url: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -56,8 +78,24 @@ export function SidePanelApp() {
       setUiLanguage(settings.uiLanguage);
 
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!alive || !tab?.id) return;
+      setTabId(tab.id);
+      const url = tab.url ?? '';
+      setPageUrl(url);
+      persistRef.current = { tabId: tab.id, url };
+
+      const thread = await getChatThread(tab.id, url);
       if (!alive) return;
-      if (tab?.id) setTabId(tab.id);
+      if (thread?.messages.length) {
+        setMessages(
+          thread.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            createdAt: m.createdAt,
+          })),
+        );
+      }
 
       const pending = await getPendingElementContext();
       if (!alive) return;
@@ -73,6 +111,12 @@ export function SidePanelApp() {
   }, [messages, streaming]);
 
   useEffect(() => {
+    if (!persistRef.current || streaming) return;
+    const { tabId: id, url } = persistRef.current;
+    void saveChatThread(id, url, toHistory(messages));
+  }, [messages, streaming]);
+
+  useEffect(() => {
     const port = chrome.runtime.connect({ name: 'locallens-chat' });
     portRef.current = port;
     port.onMessage.addListener((message: ChatPortServerMessage) => {
@@ -82,6 +126,8 @@ export function SidePanelApp() {
           url: message.url,
           truncated: message.truncated,
           chars: message.chars,
+          usedRetrieval: message.usedRetrieval,
+          selectedChunks: message.selectedChunks,
         });
         return;
       }
@@ -159,10 +205,17 @@ export function SidePanelApp() {
     setInput('');
     setError(null);
     setStreaming(true);
+    const now = Date.now();
     setMessages((prev) => [
       ...prev,
-      { id: newId(), role: 'user', content: question },
-      { id: newId(), role: 'assistant', content: '', streaming: true },
+      { id: newId(), role: 'user', content: question, createdAt: now },
+      {
+        id: newId(),
+        role: 'assistant',
+        content: '',
+        streaming: true,
+        createdAt: now + 1,
+      },
     ]);
     post({
       type: 'CHAT_START',
@@ -187,6 +240,9 @@ export function SidePanelApp() {
     setError(null);
     setStreaming(false);
     requestIdRef.current = null;
+    if (persistRef.current) {
+      void clearChatThread(persistRef.current.tabId, persistRef.current.url);
+    }
   };
 
   const refreshContext = async () => {
@@ -194,9 +250,22 @@ export function SidePanelApp() {
     const pending = await getPendingElementContext();
     setElementContext(pending?.text ?? null);
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.id) setTabId(tab.id);
+    if (tab?.id) {
+      setTabId(tab.id);
+      const url = tab.url ?? '';
+      setPageUrl(url);
+      persistRef.current = { tabId: tab.id, url };
+      const thread = await getChatThread(tab.id, url);
+      setMessages(
+        (thread?.messages ?? []).map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          createdAt: m.createdAt,
+        })),
+      );
+    }
     setPageMeta(null);
-    setError(null);
   };
 
   return (
@@ -216,11 +285,17 @@ export function SidePanelApp() {
         {pageMeta ? (
           <p className="m-0 mt-1 text-xs text-[var(--ll-muted)]">
             {pageMeta.title || pageMeta.url} · {pageMeta.chars} chars
-            {pageMeta.truncated ? ' · truncated' : ''}
+            {pageMeta.usedRetrieval
+              ? ` · retrieved ${pageMeta.selectedChunks ?? 0} passages`
+              : pageMeta.truncated
+                ? ' · truncated'
+                : ''}
           </p>
         ) : (
           <p className="m-0 mt-1 text-xs text-[var(--ll-muted)]">
-            Answers use the active tab’s extracted content via local Ollama.
+            {pageUrl
+              ? 'History is kept per tab and URL on this device.'
+              : 'Answers use the active tab’s extracted content via local Ollama.'}
           </p>
         )}
       </header>
@@ -248,8 +323,8 @@ export function SidePanelApp() {
       <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
           <p className="m-0 text-sm text-[var(--ll-muted)]">
-            Ask a question about this page. If the answer is not on the page, the model
-            should say so.
+            Ask a question about this page. Long pages retrieve the most relevant
+            passages with embeddings.
           </p>
         ) : null}
         {messages.map((message) => (
@@ -265,7 +340,9 @@ export function SidePanelApp() {
               {message.role === 'user' ? 'You' : 'LocalLens'}
               {message.streaming ? ' · …' : ''}
             </p>
-            <div className="leading-relaxed">{renderSafeChatText(message.content || ' ')}</div>
+            <div className="leading-relaxed">
+              {renderSafeChatText(message.content || ' ')}
+            </div>
           </div>
         ))}
       </div>

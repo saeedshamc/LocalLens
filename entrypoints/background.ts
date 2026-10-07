@@ -10,6 +10,7 @@ import type {
 import { testOllamaConnection } from '../lib/ollama/connection';
 import { OllamaClientError } from '../lib/ollama/client';
 import { streamOllamaChat } from '../lib/ollama/stream';
+import { retrievePageContext } from '../lib/retrieve/retrieve';
 import { getSettings } from '../lib/settings/storage';
 import { setPendingElementContext } from '../lib/storage/pending-context';
 import { runElementAction } from '../lib/translate/element-actions';
@@ -305,14 +306,6 @@ async function handleChatPortMessage(
     }
 
     const page = extracted.pageText;
-    postChat(port, {
-      type: 'PAGE_META',
-      title: page.title,
-      url: page.url,
-      truncated: page.truncated,
-      chars: page.text.length,
-    });
-
     const settings = await getSettings();
     const model = settings.chatModel || settings.translateModel;
     if (!model) {
@@ -324,11 +317,29 @@ async function handleChatPortMessage(
       return;
     }
 
+    const retrieved = await retrievePageContext({
+      url: page.url,
+      text: page.text,
+      question: message.question,
+      settings,
+      signal: controller.signal,
+    });
+
+    postChat(port, {
+      type: 'PAGE_META',
+      title: page.title,
+      url: page.url,
+      truncated: page.truncated || retrieved.usedRetrieval,
+      chars: page.text.length,
+      usedRetrieval: retrieved.usedRetrieval,
+      selectedChunks: retrieved.selectedCount,
+    });
+
     const messages = buildChatMessages({
       systemPrompt: settings.systemPromptChat,
       pageTitle: page.title,
       pageUrl: page.url,
-      pageText: page.text,
+      pageText: retrieved.contextText,
       elementContext: message.elementContext,
       question: message.question,
     });

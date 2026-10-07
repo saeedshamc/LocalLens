@@ -143,4 +143,20 @@ Record of meaningful choices made during development. Newest entries first withi
 
 ---
 
+## 2026-10-07 — Milestone 0.5.0
+
+### Long-page threshold and top-k
+
+**Decision:** Pages longer than ~6000 characters use embeddings; return top 6 chunks by cosine similarity to the question.
+
+**Why:** Balances context quality against `num_ctx` and service-worker time; cache avoids re-embedding unchanged pages.
+
+### Unified IndexedDB
+
+**Decision:** Single `locallens` database (v3) with `translations`, `embeddings`, and `chatHistory` stores.
+
+**Why:** Avoids version skew when multiple modules open the same DB name independently.
+
+---
+
 *Further decisions will be appended as milestones progress.*

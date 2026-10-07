@@ -73,7 +73,7 @@ export default defineContentScript({
       }
 
       if (message.type === 'EXTRACT_PAGE_TEXT') {
-        const extracted = extractPageText();
+        const extracted = extractPageText(document, 250_000);
         if (!extracted.text.trim()) {
           return {
             ok: false,

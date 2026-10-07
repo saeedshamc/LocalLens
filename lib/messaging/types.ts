@@ -86,6 +86,8 @@ export type ChatPortServerMessage =
       url: string;
       truncated: boolean;
       chars: number;
+      usedRetrieval?: boolean;
+      selectedChunks?: number;
     };
 
 export type ContentEvent =
