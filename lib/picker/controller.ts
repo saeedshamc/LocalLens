@@ -4,6 +4,8 @@ import { createPickerOverlay, resolveTargetElement, type PickerOverlay } from '.
 export interface PickerControllerOptions {
   onPick: (payload: { action: PickerAction; text: string; outerHTMLSnippet: string }) => void;
   onCancel: () => void;
+  getActionLabels: () => Record<PickerAction, string>;
+  getDir?: () => 'ltr' | 'rtl';
 }
 
 export interface PickerController {
@@ -62,6 +64,8 @@ export function createPickerController(options: PickerControllerOptions): Picker
     menu = showActionMenu({
       x: event.clientX,
       y: event.clientY,
+      labels: options.getActionLabels(),
+      dir: options.getDir?.() ?? 'ltr',
       onAction: (action) => {
         clearMenu();
         stop();

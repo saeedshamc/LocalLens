@@ -3,6 +3,8 @@ export type PickerAction = 'translate' | 'explain' | 'summarize' | 'ask';
 export interface ActionMenuOptions {
   x: number;
   y: number;
+  labels: Record<PickerAction, string>;
+  dir?: 'ltr' | 'rtl';
   onAction: (action: PickerAction) => void;
   onDismiss: () => void;
 }
@@ -11,12 +13,7 @@ export interface ActionMenuHandle {
   destroy: () => void;
 }
 
-const ACTIONS: { id: PickerAction; label: string }[] = [
-  { id: 'translate', label: 'Translate' },
-  { id: 'explain', label: 'Explain' },
-  { id: 'summarize', label: 'Summarize' },
-  { id: 'ask', label: 'Ask in chat' },
-];
+const ACTION_IDS: PickerAction[] = ['translate', 'explain', 'summarize', 'ask'];
 
 /** Shadow-DOM action menu so host page CSS cannot break layout. */
 export function showActionMenu(options: ActionMenuOptions): ActionMenuHandle {
@@ -61,16 +58,17 @@ export function showActionMenu(options: ActionMenuOptions): ActionMenuHandle {
   const menu = document.createElement('div');
   menu.className = 'menu';
   menu.setAttribute('role', 'menu');
+  menu.setAttribute('dir', options.dir ?? 'ltr');
 
-  for (const action of ACTIONS) {
+  for (const id of ACTION_IDS) {
     const button = document.createElement('button');
     button.type = 'button';
     button.setAttribute('role', 'menuitem');
-    button.textContent = action.label;
+    button.textContent = options.labels[id];
     button.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      options.onAction(action.id);
+      options.onAction(id);
     });
     menu.appendChild(button);
   }
