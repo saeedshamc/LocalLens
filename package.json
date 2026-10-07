@@ -1,6 +1,6 @@
 {
   "name": "locallens",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "description": "Private, offline-first Chrome extension for page translation and chat via local Ollama",
   "type": "module",

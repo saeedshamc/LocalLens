@@ -185,4 +185,26 @@ Record of meaningful choices made during development. Newest entries first withi
 
 ---
 
+## 2026-10-07 — Milestone 1.5.0 (voice)
+
+### TTS via `chrome.tts`, not Ollama
+
+**Decision:** Read-aloud uses `chrome.tts` (system voices). Translation still uses Ollama; spoken output does not.
+
+**Why:** Ollama has no first-class TTS/STT runtime. System TTS keeps read-aloud local and avoids shipping a separate Piper/Whisper stack inside the extension.
+
+### STT via Web Speech API (optional)
+
+**Decision:** Voice input in the side panel uses the browser Speech Recognition API, with an explicit privacy note that Chrome may send audio to Google.
+
+**Why:** No local Whisper server is required for a usable MVP; users who need fully offline STT can type instead. A future optional local Whisper HTTP endpoint can be added without changing the picker/chat UX.
+
+### Picker actions `read` and `translateRead`
+
+**Decision:** Element picker gains **Read aloud** (speak original) and **Translate & read** (Ollama translate → speak target language).
+
+**Why:** Matches the common “select → hear / hear translation” workflow without opening chat first.
+
+---
+
 *Further decisions will be appended as milestones progress.*

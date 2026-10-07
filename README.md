@@ -7,8 +7,9 @@ Private, offline-first Chrome extension (Manifest V3) that uses a local [Ollama]
 ## Features
 
 - **Whole-page translation** — contextual (by meaning), lazy for visible blocks, watches dynamic content
-- **Element picker** — Inspect-style selection with Translate / Explain / Summarize / Ask in chat
-- **Side panel chat** — streamed answers grounded on the current page (embeddings for long pages)
+- **Element picker** — Inspect-style selection with Translate / Explain / Summarize / Ask in chat / Read aloud / Translate & read
+- **Side panel chat** — streamed answers grounded on the current page (embeddings for long pages); optional voice input and speak-reply
+- **Voice** — system TTS for read-aloud; browser speech recognition for chat dictation (see privacy note)
 - **Settings & Help** — Ollama host, models, prompts, per-OS `OLLAMA_ORIGINS` setup
 - **Privacy** — no cloud APIs, no telemetry, no remote code
 

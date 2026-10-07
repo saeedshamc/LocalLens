@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-10-07
+
+### Added
+
+- Voice: read aloud and translate-then-read from the element picker (system TTS via `chrome.tts`).
+- Voice input in the side panel chat (browser Speech Recognition) with privacy notice.
+- Speak / stop controls for chat replies and element previews; optional auto-speak replies.
+- Voice settings: enable TTS, speech rate, STT language, auto-speak.
+
 ## [1.4.0] - 2026-10-07
 
 ### Added
