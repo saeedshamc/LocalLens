@@ -5,6 +5,7 @@ import type {
   ExtensionResponse,
 } from '../lib/messaging/types';
 import { createPickerController } from '../lib/picker/controller';
+import { applyElementTranslation } from '../lib/translate/apply-element';
 import { createLazyTranslator, type LazyTranslateController } from '../lib/translate/lazy';
 import { isRtlLanguage } from '../lib/utils/rtl';
 
@@ -101,12 +102,33 @@ export default defineContentScript({
         };
       }
 
+      if (message.type === 'APPLY_ELEMENT_TRANSLATION') {
+        const ok = applyElementTranslation(
+          document.body,
+          message.originalText,
+          message.translation,
+        );
+        if (!ok) {
+          return {
+            ok: false,
+            error: 'Could not find the selected text on the page to apply the translation.',
+            kind: 'error',
+          };
+        }
+        return { ok: true, kind: 'status', translated };
+      }
+
       if (message.type === 'RESTORE_PAGE') {
         lazy?.stop();
         lazy?.restore();
         lazy = null;
         translated = false;
         busy = false;
+        void chrome.runtime.sendMessage({
+          type: 'TRANSLATE_PROGRESS',
+          done: 0,
+          pending: 0,
+        });
         return { ok: true, kind: 'status', translated: false };
       }
 
@@ -146,6 +168,13 @@ export default defineContentScript({
               }
               return batchRes.translations;
             },
+            onProgress: ({ done, pending }) => {
+              void chrome.runtime.sendMessage({
+                type: 'TRANSLATE_PROGRESS',
+                done,
+                pending,
+              });
+            },
           });
           lazy.start();
           translated = true;
@@ -163,6 +192,11 @@ export default defineContentScript({
           lazy?.stop();
           lazy = null;
           translated = false;
+          void chrome.runtime.sendMessage({
+            type: 'TRANSLATE_PROGRESS',
+            done: 0,
+            pending: 0,
+          });
           const msg =
             error instanceof Error ? error.message : 'Unexpected translation error.';
           return { ok: false, error: msg, kind: 'error' };

@@ -8,6 +8,7 @@ import {
 import { ConnectionBanner } from '../../components/ConnectionBanner';
 import { PageShell } from '../../components/PageShell';
 import { t } from '../../lib/i18n';
+import type { ExtensionResponse } from '../../lib/messaging/types';
 import { testOllamaConnection } from '../../lib/ollama/connection';
 import type { ConnectionResult } from '../../lib/ollama/types';
 import {
@@ -16,6 +17,10 @@ import {
 } from '../../lib/settings/defaults';
 import { getSettings, saveSettings } from '../../lib/settings/storage';
 import type { Settings, UiLanguage } from '../../lib/settings/types';
+import {
+  formatBytes,
+  type CacheSizes,
+} from '../../lib/storage/cache-admin';
 
 const TARGET_LANGUAGE_OPTIONS = [
   { value: 'fa', label: 'Persian (fa)' },
@@ -35,9 +40,29 @@ export function OptionsApp() {
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [cache, setCache] = useState<CacheSizes | null>(null);
+  const [cacheMessage, setCacheMessage] = useState<string | null>(null);
+
+  const refreshCache = async () => {
+    const res = (await chrome.runtime.sendMessage({
+      type: 'GET_CACHE_STATS',
+    })) as ExtensionResponse;
+    if (res.ok && 'cache' in res) setCache(res.cache);
+  };
 
   useEffect(() => {
-    void getSettings().then(setSettings);
+    let alive = true;
+    void getSettings().then((s) => {
+      if (alive) setSettings(s);
+    });
+    void chrome.runtime
+      .sendMessage({ type: 'GET_CACHE_STATS' })
+      .then((res: ExtensionResponse) => {
+        if (alive && res.ok && 'cache' in res) setCache(res.cache);
+      });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (!settings) {
@@ -242,6 +267,62 @@ export function OptionsApp() {
         >
           {t(lang, 'reset')}
         </button>
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-lg border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)]/80 p-4">
+        <h2 className="m-0 text-base font-semibold">{t(lang, 'sectionCache')}</h2>
+        {cache ? (
+          <div className="space-y-1 text-sm text-[var(--ll-muted)]">
+            <p className="m-0">
+              {t(lang, 'cacheTotal', { size: formatBytes(cache.totalBytes) })}
+            </p>
+            <p className="m-0">
+              {t(lang, 'cacheTranslations', { count: cache.translationsCount })} —{' '}
+              {formatBytes(cache.translationsBytes)}
+            </p>
+            <p className="m-0">
+              {t(lang, 'cacheEmbeddings', { count: cache.embeddingsCount })} —{' '}
+              {formatBytes(cache.embeddingsBytes)}
+            </p>
+            <p className="m-0">
+              {t(lang, 'cacheChat', { count: cache.chatHistoryCount })} —{' '}
+              {formatBytes(cache.chatHistoryBytes)}
+            </p>
+          </div>
+        ) : (
+          <p className="m-0 text-sm text-[var(--ll-muted)]">{t(lang, 'loading')}</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ['translations', 'clearTranslations'],
+              ['embeddings', 'clearEmbeddings'],
+              ['chat', 'clearChatCache'],
+              ['all', 'clearAllCaches'],
+            ] as const
+          ).map(([scope, labelKey]) => (
+            <button
+              key={scope}
+              type="button"
+              className={buttonSecondaryClassName}
+              onClick={() => {
+                if (!window.confirm(t(lang, 'confirmClear'))) return;
+                void (async () => {
+                  await chrome.runtime.sendMessage({ type: 'CLEAR_CACHE', scope });
+                  setCacheMessage(t(lang, 'cacheCleared'));
+                  await refreshCache();
+                })();
+              }}
+            >
+              {t(lang, labelKey)}
+            </button>
+          ))}
+        </div>
+        {cacheMessage ? (
+          <p className="m-0 text-sm text-[var(--ll-accent)]" role="status">
+            {cacheMessage}
+          </p>
+        ) : null}
       </section>
 
       <section className="flex flex-col gap-3 rounded-lg border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)]/80 p-4">

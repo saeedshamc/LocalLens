@@ -18,7 +18,17 @@ export type ExtensionRequest =
       tabId: number;
     }
   | { type: 'TOGGLE_PICKER'; tabId: number }
-  | { type: 'PING_CONTENT' };
+  | { type: 'PING_CONTENT' }
+  | { type: 'TRANSLATE_PROGRESS'; done: number; pending: number; tabId?: number }
+  | { type: 'GET_CACHE_STATS' }
+  | { type: 'CLEAR_CACHE'; scope: 'translations' | 'embeddings' | 'chat' | 'all' }
+  | {
+      type: 'APPLY_ELEMENT_TRANSLATION';
+      tabId: number;
+      originalText: string;
+      translation: string;
+    }
+  | { type: 'DISCARD_ELEMENT_RESULT' };
 
 export type ExtensionResponse =
   | { ok: true; settings: Settings }
@@ -32,6 +42,20 @@ export type ExtensionResponse =
   | { ok: true; result: string }
   | { ok: true; pong: true }
   | { ok: true; pickerActive?: boolean }
+  | {
+      ok: true;
+      cache: {
+        translationsBytes: number;
+        embeddingsBytes: number;
+        chatHistoryBytes: number;
+        totalBytes: number;
+        translationsCount: number;
+        embeddingsCount: number;
+        chatHistoryCount: number;
+      };
+    }
+  | { ok: true; cleared: true }
+  | { ok: true; applied: true }
   | { ok: false; error: string; kind?: string };
 
 export type ContentRequest =
@@ -41,7 +65,12 @@ export type ContentRequest =
   | { type: 'START_PICKER' }
   | { type: 'STOP_PICKER' }
   | { type: 'TOGGLE_PICKER' }
-  | { type: 'EXTRACT_PAGE_TEXT' };
+  | { type: 'EXTRACT_PAGE_TEXT' }
+  | {
+      type: 'APPLY_ELEMENT_TRANSLATION';
+      originalText: string;
+      translation: string;
+    };
 
 export type ContentResponse =
   | {

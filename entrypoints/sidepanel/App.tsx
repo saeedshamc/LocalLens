@@ -9,6 +9,7 @@ import { t } from '../../lib/i18n';
 import type {
   ChatPortClientMessage,
   ChatPortServerMessage,
+  ExtensionResponse,
 } from '../../lib/messaging/types';
 import { getSettings } from '../../lib/settings/storage';
 import {
@@ -17,6 +18,11 @@ import {
   saveChatThread,
   type ChatHistoryMessage,
 } from '../../lib/storage/chat-history';
+import {
+  ELEMENT_RESULT_KEY,
+  getElementActionResult,
+  type ElementActionResult,
+} from '../../lib/storage/element-result';
 import {
   clearPendingElementContext,
   getPendingElementContext,
@@ -62,6 +68,8 @@ export function SidePanelApp() {
   const [pageUrl, setPageUrl] = useState<string>('');
   const [pageMeta, setPageMeta] = useState<PageMeta | null>(null);
   const [elementContext, setElementContext] = useState<string | null>(null);
+  const [elementResult, setElementResult] = useState<ElementActionResult | null>(null);
+  const [previewStatus, setPreviewStatus] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -101,9 +109,22 @@ export function SidePanelApp() {
       const pending = await getPendingElementContext();
       if (!alive) return;
       if (pending?.text) setElementContext(pending.text);
+      setElementResult(await getElementActionResult());
     })();
+
+    const onChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      area: string,
+    ) => {
+      if (area !== 'session') return;
+      if (ELEMENT_RESULT_KEY in changes) {
+        void getElementActionResult().then(setElementResult);
+      }
+    };
+    chrome.storage.onChanged.addListener(onChange);
     return () => {
       alive = false;
+      chrome.storage.onChanged.removeListener(onChange);
     };
   }, []);
 
@@ -316,6 +337,69 @@ export function SidePanelApp() {
           <p className="m-0 max-h-24 overflow-auto whitespace-pre-wrap">
             {elementContext.slice(0, 1200)}
           </p>
+        </div>
+      ) : null}
+
+      {elementResult ? (
+        <div className="mx-4 mt-3 rounded-md border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)] px-3 py-2 text-sm">
+          <h2 className="m-0 text-sm font-semibold capitalize">
+            {t(uiLanguage, 'elementPreview')} — {elementResult.action}
+          </h2>
+          {elementResult.error ? (
+            <p className="m-0 mt-2 text-[var(--ll-danger)]" role="alert">
+              {elementResult.error}
+            </p>
+          ) : (
+            <div className="mt-2 max-h-40 overflow-auto leading-relaxed">
+              {renderSafeChatText(elementResult.result ?? '')}
+            </div>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {elementResult.action === 'translate' && elementResult.result ? (
+              <button
+                type="button"
+                className={buttonPrimaryClassName}
+                onClick={() => {
+                  if (!elementResult.tabId || !elementResult.result) return;
+                  void (async () => {
+                    const res = (await chrome.runtime.sendMessage({
+                      type: 'APPLY_ELEMENT_TRANSLATION',
+                      tabId: elementResult.tabId,
+                      originalText: elementResult.text,
+                      translation: elementResult.result,
+                    })) as ExtensionResponse;
+                    if (!res.ok) {
+                      setError(res.error);
+                      return;
+                    }
+                    setPreviewStatus(t(uiLanguage, 'applySuccess'));
+                    setElementResult(null);
+                  })();
+                }}
+              >
+                {t(uiLanguage, 'applyToPage')}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={buttonSecondaryClassName}
+              onClick={() => {
+                void chrome.runtime
+                  .sendMessage({ type: 'DISCARD_ELEMENT_RESULT' })
+                  .then(() => {
+                    setElementResult(null);
+                    setPreviewStatus(null);
+                  });
+              }}
+            >
+              {t(uiLanguage, 'discard')}
+            </button>
+          </div>
+          {previewStatus ? (
+            <p className="m-0 mt-2 text-xs text-[var(--ll-accent)]" role="status">
+              {previewStatus}
+            </p>
+          ) : null}
         </div>
       ) : null}
 

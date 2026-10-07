@@ -12,6 +12,17 @@ import { OllamaClientError } from '../lib/ollama/client';
 import { streamOllamaChat } from '../lib/ollama/stream';
 import { retrievePageContext } from '../lib/retrieve/retrieve';
 import { getSettings } from '../lib/settings/storage';
+import {
+  clearAllCaches,
+  clearChatHistoryCache,
+  clearEmbeddingsCache,
+  clearTranslationsCache,
+  estimateCacheSize,
+} from '../lib/storage/cache-admin';
+import {
+  clearElementActionResult,
+  setElementActionResult,
+} from '../lib/storage/element-result';
 import { setPendingElementContext } from '../lib/storage/pending-context';
 import { runElementAction } from '../lib/translate/element-actions';
 import { translateBatch } from '../lib/translate/engine';
@@ -65,6 +76,12 @@ export default defineBackground(() => {
   });
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (isProgressMessage(message)) {
+      updateTranslateBadge(message.done, message.pending);
+      sendResponse({ ok: true });
+      return true;
+    }
+
     if (isContentEvent(message)) {
       void handleContentEvent(message, sender.tab).then(() => sendResponse({ ok: true }));
       return true;
@@ -82,6 +99,27 @@ export default defineBackground(() => {
     return true;
   });
 });
+
+function isProgressMessage(
+  message: unknown,
+): message is { type: 'TRANSLATE_PROGRESS'; done: number; pending: number } {
+  return (
+    !!message &&
+    typeof message === 'object' &&
+    (message as { type?: string }).type === 'TRANSLATE_PROGRESS'
+  );
+}
+
+function updateTranslateBadge(done: number, pending: number): void {
+  const total = done + pending;
+  if (total === 0 || pending === 0) {
+    void chrome.action.setBadgeText({ text: '' });
+    return;
+  }
+  const pct = Math.min(99, Math.round((done / total) * 100));
+  void chrome.action.setBadgeBackgroundColor({ color: '#0f6e56' });
+  void chrome.action.setBadgeText({ text: `${pct}` });
+}
 
 function ensureContextMenu(): void {
   chrome.contextMenus.removeAll(() => {
@@ -124,15 +162,13 @@ async function handleContentEvent(
   const settings = await getSettings();
   try {
     const result = await runElementAction(message.action, message.text, settings);
-    await chrome.storage.session.set({
-      'locallens.lastElementResult': {
-        action: message.action,
-        result,
-        text: message.text,
-        url: message.url,
-        tabId: tab.id,
-        createdAt: Date.now(),
-      },
+    await setElementActionResult({
+      action: message.action,
+      result,
+      text: message.text,
+      url: message.url,
+      tabId: tab.id,
+      createdAt: Date.now(),
     });
     try {
       await chrome.sidePanel.open({ tabId: tab.id });
@@ -140,15 +176,13 @@ async function handleContentEvent(
       // ignore
     }
   } catch (error) {
-    await chrome.storage.session.set({
-      'locallens.lastElementResult': {
-        action: message.action,
-        error: error instanceof Error ? error.message : 'Element action failed.',
-        text: message.text,
-        url: message.url,
-        tabId: tab.id,
-        createdAt: Date.now(),
-      },
+    await setElementActionResult({
+      action: message.action,
+      error: error instanceof Error ? error.message : 'Element action failed.',
+      text: message.text,
+      url: message.url,
+      tabId: tab.id,
+      createdAt: Date.now(),
     });
     try {
       await chrome.sidePanel.open({ tabId: tab.id });
@@ -244,6 +278,44 @@ async function handleMessage(
       if (!tabId) return { ok: false, error: 'No active tab.' };
       const tab = await chrome.tabs.get(tabId);
       return togglePickerOnTab(tabId, tab.url);
+    }
+    case 'TRANSLATE_PROGRESS': {
+      updateTranslateBadge(message.done, message.pending);
+      return { ok: true, pong: true };
+    }
+    case 'GET_CACHE_STATS': {
+      const cache = await estimateCacheSize();
+      return { ok: true, cache };
+    }
+    case 'CLEAR_CACHE': {
+      if (message.scope === 'translations') await clearTranslationsCache();
+      else if (message.scope === 'embeddings') await clearEmbeddingsCache();
+      else if (message.scope === 'chat') await clearChatHistoryCache();
+      else await clearAllCaches();
+      return { ok: true, cleared: true };
+    }
+    case 'APPLY_ELEMENT_TRANSLATION': {
+      try {
+        const res = (await chrome.tabs.sendMessage(message.tabId, {
+          type: 'APPLY_ELEMENT_TRANSLATION',
+          originalText: message.originalText,
+          translation: message.translation,
+        })) as ContentResponse;
+        if (!res.ok) {
+          return { ok: false, error: res.error };
+        }
+        await clearElementActionResult();
+        return { ok: true, applied: true };
+      } catch {
+        return {
+          ok: false,
+          error: 'Could not apply translation on the page. Reload the tab and try again.',
+        };
+      }
+    }
+    case 'DISCARD_ELEMENT_RESULT': {
+      await clearElementActionResult();
+      return { ok: true, cleared: true };
     }
     case 'PING_CONTENT':
       return { ok: true, pong: true };
