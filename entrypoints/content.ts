@@ -7,6 +7,7 @@ import type {
 import { createPickerController } from '../lib/picker/controller';
 import { applyElementTranslation } from '../lib/translate/apply-element';
 import { createLazyTranslator, type LazyTranslateController } from '../lib/translate/lazy';
+import { createTranslatePortClient } from '../lib/translate/port-client';
 import { looksLikeTargetLanguage } from '../lib/utils/detect-lang';
 import { isRtlLanguage } from '../lib/utils/rtl';
 
@@ -15,6 +16,7 @@ export default defineContentScript({
   runAt: 'document_idle',
   main() {
     let lazy: LazyTranslateController | null = null;
+    let translatePort: ReturnType<typeof createTranslatePortClient> | null = null;
     let translated = false;
     let busy = false;
 
@@ -123,6 +125,8 @@ export default defineContentScript({
         lazy?.stop();
         lazy?.restore();
         lazy = null;
+        translatePort?.disconnect();
+        translatePort = null;
         translated = false;
         busy = false;
         void chrome.runtime.sendMessage({
@@ -143,6 +147,8 @@ export default defineContentScript({
           lazy?.stop();
           lazy?.restore();
           lazy = null;
+          translatePort?.disconnect();
+          translatePort = null;
           translated = false;
 
           const settings = await ensureSettings();
@@ -168,21 +174,11 @@ export default defineContentScript({
           }
 
           const rtl = isRtlLanguage(settings.targetLanguage);
+          translatePort = createTranslatePortClient();
           lazy = createLazyTranslator({
             rtl,
             mode: settings.translationMode,
-            translateBatch: async (texts) => {
-              const batchRes = (await chrome.runtime.sendMessage({
-                type: 'TRANSLATE_BATCH',
-                texts,
-              })) as ExtensionResponse;
-              if (!batchRes.ok || !('translations' in batchRes)) {
-                throw new Error(
-                  !batchRes.ok ? batchRes.error : 'Translation failed.',
-                );
-              }
-              return batchRes.translations;
-            },
+            translateBatch: (texts) => translatePort!.translateBatch(texts),
             onProgress: ({ done, pending }) => {
               void chrome.runtime.sendMessage({
                 type: 'TRANSLATE_PROGRESS',
@@ -206,6 +202,8 @@ export default defineContentScript({
         } catch (error) {
           lazy?.stop();
           lazy = null;
+          translatePort?.disconnect();
+          translatePort = null;
           translated = false;
           void chrome.runtime.sendMessage({
             type: 'TRANSLATE_PROGRESS',

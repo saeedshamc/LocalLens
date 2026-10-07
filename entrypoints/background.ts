@@ -6,6 +6,8 @@ import type {
   ContentResponse,
   ExtensionRequest,
   ExtensionResponse,
+  TranslatePortClientMessage,
+  TranslatePortServerMessage,
 } from '../lib/messaging/types';
 import { testOllamaConnection } from '../lib/ollama/connection';
 import { OllamaClientError } from '../lib/ollama/client';
@@ -63,16 +65,24 @@ export default defineBackground(() => {
   });
 
   chrome.runtime.onConnect.addListener((port) => {
-    if (port.name !== 'locallens-chat') return;
-    port.onMessage.addListener((message: ChatPortClientMessage) => {
-      void handleChatPortMessage(port, message);
-    });
-    port.onDisconnect.addListener(() => {
-      for (const [id, controller] of chatAbortControllers) {
-        controller.abort();
-        chatAbortControllers.delete(id);
-      }
-    });
+    if (port.name === 'locallens-chat') {
+      port.onMessage.addListener((message: ChatPortClientMessage) => {
+        void handleChatPortMessage(port, message);
+      });
+      port.onDisconnect.addListener(() => {
+        for (const [id, controller] of chatAbortControllers) {
+          controller.abort();
+          chatAbortControllers.delete(id);
+        }
+      });
+      return;
+    }
+
+    if (port.name === 'locallens-translate') {
+      port.onMessage.addListener((message: TranslatePortClientMessage) => {
+        void handleTranslatePortMessage(port, message);
+      });
+    }
   });
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -332,6 +342,46 @@ function postChat(
     port.postMessage(message);
   } catch {
     // Port disconnected.
+  }
+}
+
+function postTranslate(
+  port: chrome.runtime.Port,
+  message: TranslatePortServerMessage,
+): void {
+  try {
+    port.postMessage(message);
+  } catch {
+    // Port disconnected.
+  }
+}
+
+async function handleTranslatePortMessage(
+  port: chrome.runtime.Port,
+  message: TranslatePortClientMessage,
+): Promise<void> {
+  if (message.type !== 'TRANSLATE_BATCH') return;
+  const settings = await getSettings();
+  try {
+    const result = await translateBatch({ texts: message.texts, settings });
+    postTranslate(port, {
+      type: 'TRANSLATE_BATCH_RESULT',
+      requestId: message.requestId,
+      translations: result.translations,
+      fromCache: result.fromCache,
+      fromModel: result.fromModel,
+    });
+  } catch (error) {
+    postTranslate(port, {
+      type: 'TRANSLATE_BATCH_ERROR',
+      requestId: message.requestId,
+      error:
+        error instanceof OllamaClientError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : 'Translation failed.',
+    });
   }
 }
 

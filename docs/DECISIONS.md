@@ -169,4 +169,20 @@ Record of meaningful choices made during development. Newest entries first withi
 
 ---
 
+## 2026-10-07 — Milestone 1.3.0
+
+### Translate over a long-lived port
+
+**Decision:** Content script opens `chrome.runtime.connect({ name: 'locallens-translate' })` for page translation batches.
+
+**Why:** Same rationale as chat streaming — keep the service worker alive across many small Ollama calls on long pages.
+
+### Lazy queue limits
+
+**Decision:** Debounce MutationObserver ingest by 300ms, cap the block queue at 40 (newest kept), and enforce ≥200ms between Ollama batches.
+
+**Why:** Dynamic SPAs otherwise flood Ollama with overlapping requests.
+
+---
+
 *Further decisions will be appended as milestones progress.*

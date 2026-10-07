@@ -1,14 +1,22 @@
 import {
   applyTranslations,
   collectTranslatableTextNodes,
+  restoreOriginals,
   type ApplyMode,
   type CollectableTextNode,
 } from './dom';
+import { clampQueueSize, createDebouncedRunner, waitAtLeast } from './queue';
 
 export interface LazyTranslateOptions {
   root?: ParentNode;
   rtl: boolean;
   mode?: ApplyMode;
+  /** Max blocks waiting for translation (newest kept). */
+  maxQueue?: number;
+  /** Debounce for MutationObserver ingest. */
+  mutationDebounceMs?: number;
+  /** Minimum gap between Ollama batch calls. */
+  minBatchIntervalMs?: number;
   translateBatch: (texts: string[]) => Promise<string[]>;
   onProgress?: (info: { done: number; pending: number }) => void;
 }
@@ -24,6 +32,10 @@ export interface LazyTranslateController {
 const BLOCK_SELECTOR =
   'p, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, figcaption, article, section, div';
 
+const DEFAULT_MAX_QUEUE = 40;
+const DEFAULT_MUTATION_DEBOUNCE_MS = 300;
+const DEFAULT_MIN_BATCH_INTERVAL_MS = 200;
+
 function blockForNode(node: Text): Element | null {
   const parent = node.parentElement;
   if (!parent) return null;
@@ -32,35 +44,51 @@ function blockForNode(node: Text): Element | null {
 
 /**
  * Translate visible text blocks first (IntersectionObserver) and watch the DOM
- * for newly inserted content (MutationObserver).
+ * for newly inserted content (MutationObserver), with queue and rate limits.
  */
 export function createLazyTranslator(
   options: LazyTranslateOptions,
 ): LazyTranslateController {
   const root = options.root ?? document.body;
+  const maxQueue = options.maxQueue ?? DEFAULT_MAX_QUEUE;
+  const minBatchIntervalMs =
+    options.minBatchIntervalMs ?? DEFAULT_MIN_BATCH_INTERVAL_MS;
   const originals: CollectableTextNode[] = [];
   const pending = new Set<Text>();
-  const queuedBlocks = new Set<Element>();
+  let queuedBlocks: Element[] = [];
   let observer: IntersectionObserver | null = null;
   let mutation: MutationObserver | null = null;
   let running = false;
   let busy = false;
   let translatedCount = 0;
+  let lastBatchAt = 0;
+  const mutationDebounce = createDebouncedRunner(
+    options.mutationDebounceMs ?? DEFAULT_MUTATION_DEBOUNCE_MS,
+  );
+  let pendingMutationNodes: CollectableTextNode[] = [];
+
+  const enqueueBlock = (el: Element) => {
+    if (queuedBlocks.includes(el)) return;
+    queuedBlocks.push(el);
+    queuedBlocks = clampQueueSize(queuedBlocks, maxQueue);
+  };
 
   const flushQueue = async () => {
-    if (!running || busy || queuedBlocks.size === 0) return;
+    if (!running || busy || queuedBlocks.length === 0) return;
     busy = true;
     try {
-      while (queuedBlocks.size > 0 && running) {
-        const block = queuedBlocks.values().next().value as Element;
-        queuedBlocks.delete(block);
+      while (queuedBlocks.length > 0 && running) {
+        const block = queuedBlocks.shift();
+        if (!block) break;
         const nodes = collectTranslatableTextNodes(block).filter((item) =>
           pending.has(item.node),
         );
         if (nodes.length === 0) continue;
 
+        lastBatchAt = await waitAtLeast(lastBatchAt, minBatchIntervalMs);
         const texts = nodes.map((n) => n.text);
         const translations = await options.translateBatch(texts);
+        lastBatchAt = Date.now();
         applyTranslations(nodes, translations, options.rtl, options.mode ?? 'replace');
         for (const item of nodes) {
           pending.delete(item.node);
@@ -74,7 +102,7 @@ export function createLazyTranslator(
       }
     } finally {
       busy = false;
-      if (queuedBlocks.size > 0) void flushQueue();
+      if (queuedBlocks.length > 0) void flushQueue();
     }
   };
 
@@ -106,7 +134,7 @@ export function createLazyTranslator(
           for (const entry of entries) {
             if (!entry.isIntersecting) continue;
             if (!(entry.target instanceof Element)) continue;
-            queuedBlocks.add(entry.target);
+            enqueueBlock(entry.target);
             observer?.unobserve(entry.target);
           }
           void flushQueue();
@@ -115,19 +143,24 @@ export function createLazyTranslator(
       );
 
       mutation = new MutationObserver((records) => {
-        const fresh: CollectableTextNode[] = [];
         for (const record of records) {
           for (const node of record.addedNodes) {
             if (node.nodeType === Node.TEXT_NODE) {
               const textNode = node as Text;
               const value = textNode.nodeValue ?? '';
-              if (value.trim()) fresh.push({ node: textNode, text: value });
+              if (value.trim()) {
+                pendingMutationNodes.push({ node: textNode, text: value });
+              }
             } else if (node instanceof Element) {
-              fresh.push(...collectTranslatableTextNodes(node));
+              pendingMutationNodes.push(...collectTranslatableTextNodes(node));
             }
           }
         }
-        if (fresh.length) ingestNodes(fresh);
+        mutationDebounce.schedule(() => {
+          const batch = pendingMutationNodes;
+          pendingMutationNodes = [];
+          if (batch.length) ingestNodes(batch);
+        });
       });
 
       mutation.observe(root, { childList: true, subtree: true });
@@ -135,23 +168,16 @@ export function createLazyTranslator(
     },
     stop() {
       running = false;
+      mutationDebounce.cancel();
       observer?.disconnect();
       mutation?.disconnect();
       observer = null;
       mutation = null;
-      queuedBlocks.clear();
+      queuedBlocks = [];
+      pendingMutationNodes = [];
     },
     restore() {
-      for (const item of originals) {
-        item.node.nodeValue = item.text;
-        const parent = item.node.parentElement;
-        if (!parent) continue;
-        delete parent.dataset.llTranslated;
-        if (parent.dataset.llDirSet === '1') {
-          parent.removeAttribute('dir');
-          delete parent.dataset.llDirSet;
-        }
-      }
+      restoreOriginals(originals);
       originals.length = 0;
       pending.clear();
       translatedCount = 0;

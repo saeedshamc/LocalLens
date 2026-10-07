@@ -110,6 +110,22 @@ export type ChatPortClientMessage =
     }
   | { type: 'CHAT_CANCEL'; requestId: string };
 
+export type TranslatePortClientMessage = {
+  type: 'TRANSLATE_BATCH';
+  requestId: string;
+  texts: string[];
+};
+
+export type TranslatePortServerMessage =
+  | {
+      type: 'TRANSLATE_BATCH_RESULT';
+      requestId: string;
+      translations: string[];
+      fromCache: number;
+      fromModel: number;
+    }
+  | { type: 'TRANSLATE_BATCH_ERROR'; requestId: string; error: string };
+
 export type ChatPortServerMessage =
   | { type: 'CHAT_TOKEN'; requestId: string; token: string }
   | { type: 'CHAT_DONE'; requestId: string; full: string }
