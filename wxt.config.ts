@@ -7,11 +7,20 @@ export default defineConfig({
   vite: () => ({
     plugins: [tailwindcss()],
   }),
-  manifest: {
+  suppressWarnings: {
+    firefoxDataCollection: true,
+  },
+  manifest: ({ browser }) => ({
     name: 'LocalLens',
     description:
       'Translate pages and chat about their content using a local Ollama server. Fully offline and private.',
-    permissions: ['storage', 'tabs', 'activeTab', 'contextMenus', 'sidePanel'],
+    permissions: [
+      'storage',
+      'tabs',
+      'activeTab',
+      'contextMenus',
+      ...(browser === 'firefox' ? [] : (['sidePanel'] as const)),
+    ],
     host_permissions: [
       'http://localhost:11434/*',
       'http://127.0.0.1:11434/*',
@@ -31,7 +40,13 @@ export default defineConfig({
         description: 'Toggle LocalLens element picker',
       },
     },
-  },
+    browser_specific_settings: {
+      gecko: {
+        id: 'locallens@saeedshamc.github.io',
+        strict_min_version: '109.0',
+      },
+    },
+  }),
   hooks: {
     'build:manifestGenerated': (_wxt, manifest) => {
       if (manifest.options_ui) {
