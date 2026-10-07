@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: Settings = {
   translateModel: '',
   chatModel: '',
   embeddingModel: 'bge-m3',
+  explainModel: '',
   targetLanguage: 'fa',
   temperature: 0.2,
   numCtx: 4096,
@@ -28,4 +29,6 @@ export const DEFAULT_SETTINGS: Settings = {
   systemPromptTranslate: DEFAULT_SYSTEM_PROMPT_TRANSLATE,
   systemPromptChat: DEFAULT_SYSTEM_PROMPT_CHAT,
   uiLanguage: 'en',
+  chatHistoryTurns: 6,
+  translationMode: 'replace',
 };

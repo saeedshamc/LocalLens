@@ -7,6 +7,7 @@ import type {
 import { createPickerController } from '../lib/picker/controller';
 import { applyElementTranslation } from '../lib/translate/apply-element';
 import { createLazyTranslator, type LazyTranslateController } from '../lib/translate/lazy';
+import { looksLikeTargetLanguage } from '../lib/utils/detect-lang';
 import { isRtlLanguage } from '../lib/utils/rtl';
 
 export default defineContentScript({
@@ -153,9 +154,23 @@ export default defineContentScript({
             };
           }
 
+          const sample = (document.body?.innerText ?? '').slice(0, 4000);
+          if (
+            !message.force &&
+            looksLikeTargetLanguage(sample, settings.targetLanguage)
+          ) {
+            return {
+              ok: false,
+              error:
+                'This page already looks like the target language. Confirm to translate anyway.',
+              kind: 'sameLanguage',
+            };
+          }
+
           const rtl = isRtlLanguage(settings.targetLanguage);
           lazy = createLazyTranslator({
             rtl,
+            mode: settings.translationMode,
             translateBatch: async (texts) => {
               const batchRes = (await chrome.runtime.sendMessage({
                 type: 'TRANSLATE_BATCH',

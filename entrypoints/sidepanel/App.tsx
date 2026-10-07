@@ -239,12 +239,17 @@ export function SidePanelApp() {
         createdAt: now + 1,
       },
     ]);
+    const recent = messages
+      .filter((m) => !m.streaming && m.content.trim())
+      .slice(-12)
+      .map((m) => ({ role: m.role, content: m.content }));
     post({
       type: 'CHAT_START',
       requestId,
       tabId,
       question,
       elementContext: elementContext ?? undefined,
+      recentMessages: recent,
     });
   };
 

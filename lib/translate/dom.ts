@@ -54,11 +54,18 @@ export function collectTranslatableTextNodes(
   return results;
 }
 
+export type ApplyMode = 'replace' | 'overlay';
+
 export function applyTranslations(
   nodes: CollectableTextNode[],
   translations: string[],
   rtl: boolean,
+  mode: ApplyMode = 'replace',
 ): void {
+  if (mode === 'overlay') {
+    applyOverlayTranslations(nodes, translations, rtl);
+    return;
+  }
   for (let i = 0; i < nodes.length; i++) {
     const item = nodes[i];
     const translated = translations[i];
@@ -76,15 +83,46 @@ export function applyTranslations(
   }
 }
 
+function applyOverlayTranslations(
+  nodes: CollectableTextNode[],
+  translations: string[],
+  rtl: boolean,
+): void {
+  for (let i = 0; i < nodes.length; i++) {
+    const item = nodes[i];
+    const translated = translations[i];
+    if (!item || translated === undefined) continue;
+    const parent = item.node.parentElement;
+    if (!parent || parent.dataset.llOverlay === '1') continue;
+
+    const host = document.createElement('span');
+    host.className = 'locallens-overlay-host';
+    host.dataset.llOverlay = '1';
+    host.style.cssText =
+      'display:block;margin-top:0.25em;padding:0.2em 0.35em;border-inline-start:3px solid #0f6e56;background:rgba(216,239,230,0.55);border-radius:4px;font:inherit;';
+    if (rtl) host.setAttribute('dir', 'rtl');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const body = document.createElement('span');
+    body.textContent = translated;
+    body.style.cssText = 'font: inherit; color: #1a1f2b; line-height: 1.45;';
+    shadow.appendChild(body);
+    parent.appendChild(host);
+    parent.dataset.llTranslated = '1';
+  }
+}
+
 export function restoreOriginals(nodes: CollectableTextNode[]): void {
   for (const item of nodes) {
     item.node.nodeValue = item.text;
     const parent = item.node.parentElement;
     if (!parent) continue;
+    parent.querySelectorAll('.locallens-overlay-host').forEach((el) => el.remove());
     delete parent.dataset.llTranslated;
+    delete parent.dataset.llOverlay;
     if (parent.dataset.llDirSet === '1') {
       parent.removeAttribute('dir');
       delete parent.dataset.llDirSet;
     }
   }
+  document.querySelectorAll('.locallens-overlay-host').forEach((el) => el.remove());
 }

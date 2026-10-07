@@ -414,6 +414,8 @@ async function handleChatPortMessage(
       pageText: retrieved.contextText,
       elementContext: message.elementContext,
       question: message.question,
+      recentMessages: message.recentMessages,
+      historyTurns: settings.chatHistoryTurns,
     });
 
     const full = await streamOllamaChat({

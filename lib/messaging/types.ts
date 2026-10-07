@@ -59,7 +59,7 @@ export type ExtensionResponse =
   | { ok: false; error: string; kind?: string };
 
 export type ContentRequest =
-  | { type: 'TRANSLATE_PAGE' }
+  | { type: 'TRANSLATE_PAGE'; force?: boolean }
   | { type: 'RESTORE_PAGE' }
   | { type: 'GET_STATUS' }
   | { type: 'START_PICKER' }
@@ -93,7 +93,11 @@ export type ContentResponse =
         url: string;
       };
     }
-  | { ok: false; error: string; kind?: 'restricted' | 'empty' | 'busy' | 'error' };
+  | {
+      ok: false;
+      error: string;
+      kind?: 'restricted' | 'empty' | 'busy' | 'error' | 'sameLanguage';
+    };
 
 export type ChatPortClientMessage =
   | {
@@ -102,6 +106,7 @@ export type ChatPortClientMessage =
       tabId: number;
       question: string;
       elementContext?: string;
+      recentMessages?: { role: 'user' | 'assistant'; content: string }[];
     }
   | { type: 'CHAT_CANCEL'; requestId: string };
 

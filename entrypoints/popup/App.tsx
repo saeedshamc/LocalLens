@@ -55,14 +55,28 @@ export function PopupApp() {
   const lang = uiLanguage;
   const dir = isRtlLanguage(lang) ? 'rtl' : 'ltr';
 
-  const sendToTab = async (type: 'TRANSLATE_PAGE' | 'RESTORE_PAGE') => {
+  const sendToTab = async (
+    type: 'TRANSLATE_PAGE' | 'RESTORE_PAGE',
+    force = false,
+  ) => {
     if (tabId === null) return;
     setBusy(true);
     setError(null);
     setStatus(null);
     try {
-      const res = (await chrome.tabs.sendMessage(tabId, { type })) as ContentResponse;
+      const res = (await chrome.tabs.sendMessage(tabId, {
+        type,
+        ...(type === 'TRANSLATE_PAGE' ? { force } : {}),
+      })) as ContentResponse;
       if (!res.ok) {
+        if (res.kind === 'sameLanguage' && type === 'TRANSLATE_PAGE' && !force) {
+          const ok = window.confirm(t(lang, 'sameLanguageWarn'));
+          if (ok) {
+            setBusy(false);
+            await sendToTab('TRANSLATE_PAGE', true);
+            return;
+          }
+        }
         setError(res.error);
         return;
       }
@@ -73,7 +87,10 @@ export function PopupApp() {
       setTranslated(res.translated);
       if (type === 'TRANSLATE_PAGE') {
         setStatus(
-          `Translated ${res.nodeCount ?? 0}+ visible nodes (lazy + dynamic).`,
+          t(lang, 'translateProgress', {
+            done: res.nodeCount ?? 0,
+            pending: '…',
+          }),
         );
       } else {
         setStatus(t(lang, 'restoreOriginal'));

@@ -28,11 +28,12 @@ export async function runElementAction(
     return result.translations[0] ?? trimmed;
   }
 
-  const model = settings.chatModel || settings.translateModel;
+  const model =
+    settings.explainModel || settings.chatModel || settings.translateModel;
   if (!model) {
     throw new OllamaClientError(
       'http',
-      'No chat/translate model selected. Open Settings and choose a model.',
+      'No explain/chat/translate model selected. Open Settings and choose a model.',
     );
   }
 

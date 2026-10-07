@@ -1,12 +1,14 @@
 import {
   applyTranslations,
   collectTranslatableTextNodes,
+  type ApplyMode,
   type CollectableTextNode,
 } from './dom';
 
 export interface LazyTranslateOptions {
   root?: ParentNode;
   rtl: boolean;
+  mode?: ApplyMode;
   translateBatch: (texts: string[]) => Promise<string[]>;
   onProgress?: (info: { done: number; pending: number }) => void;
 }
@@ -59,7 +61,7 @@ export function createLazyTranslator(
 
         const texts = nodes.map((n) => n.text);
         const translations = await options.translateBatch(texts);
-        applyTranslations(nodes, translations, options.rtl);
+        applyTranslations(nodes, translations, options.rtl, options.mode ?? 'replace');
         for (const item of nodes) {
           pending.delete(item.node);
           originals.push(item);

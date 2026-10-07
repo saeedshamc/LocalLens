@@ -19,4 +19,26 @@ describe('buildChatMessages', () => {
     expect(messages[1]?.content).toContain('Selected bit');
     expect(messages[2]?.content).toBe('What is this?');
   });
+
+  it('appends recent turns before the new question', () => {
+    const messages = buildChatMessages({
+      systemPrompt: 'BASE',
+      pageTitle: 'Title',
+      pageUrl: 'https://example.com',
+      pageText: 'Body',
+      question: 'Follow-up?',
+      historyTurns: 4,
+      recentMessages: [
+        { role: 'user', content: 'First?' },
+        { role: 'assistant', content: 'Answer' },
+      ],
+    });
+    expect(messages.map((m) => m.content)).toEqual([
+      expect.stringContaining('BASE'),
+      expect.stringContaining('Body'),
+      'First?',
+      'Answer',
+      'Follow-up?',
+    ]);
+  });
 });

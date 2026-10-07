@@ -23,6 +23,10 @@ function asUiLanguage(value: unknown): Settings['uiLanguage'] {
   return value === 'fa' ? 'fa' : 'en';
 }
 
+function asTranslationMode(value: unknown): Settings['translationMode'] {
+  return value === 'overlay' ? 'overlay' : 'replace';
+}
+
 /** Normalize partial/unknown storage payloads into a full Settings object. */
 export function normalizeSettings(raw: unknown): Settings {
   const source = isRecord(raw) ? raw : {};
@@ -34,6 +38,7 @@ export function normalizeSettings(raw: unknown): Settings {
     translateModel: asString(source.translateModel, DEFAULT_SETTINGS.translateModel),
     chatModel: asString(source.chatModel, DEFAULT_SETTINGS.chatModel),
     embeddingModel: asString(source.embeddingModel, DEFAULT_SETTINGS.embeddingModel),
+    explainModel: asString(source.explainModel, DEFAULT_SETTINGS.explainModel),
     targetLanguage: asString(source.targetLanguage, DEFAULT_SETTINGS.targetLanguage),
     temperature: asNumber(source.temperature, DEFAULT_SETTINGS.temperature),
     numCtx: Math.max(256, Math.floor(asNumber(source.numCtx, DEFAULT_SETTINGS.numCtx))),
@@ -44,6 +49,11 @@ export function normalizeSettings(raw: unknown): Settings {
     ),
     systemPromptChat: asString(source.systemPromptChat, DEFAULT_SYSTEM_PROMPT_CHAT),
     uiLanguage: asUiLanguage(source.uiLanguage),
+    chatHistoryTurns: Math.max(
+      0,
+      Math.min(20, Math.floor(asNumber(source.chatHistoryTurns, DEFAULT_SETTINGS.chatHistoryTurns))),
+    ),
+    translationMode: asTranslationMode(source.translationMode),
   };
 }
 

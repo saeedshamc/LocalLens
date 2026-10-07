@@ -183,6 +183,14 @@ export function OptionsApp() {
           onChange={(v) => update('embeddingModel', v)}
           allowCustom
         />
+        <ModelSelect
+          id="explainModel"
+          label={t(lang, 'explainModel')}
+          value={settings.explainModel}
+          models={models}
+          placeholder={t(lang, 'selectModel')}
+          onChange={(v) => update('explainModel', v)}
+        />
       </section>
 
       <section className="flex flex-col gap-3 rounded-lg border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)]/80 p-4">
@@ -232,6 +240,33 @@ export function OptionsApp() {
             onChange={(e) => update('keepAlive', e.target.value)}
             placeholder="5m"
           />
+        </Field>
+        <Field label={t(lang, 'chatHistoryTurns')} htmlFor="chatHistoryTurns">
+          <input
+            id="chatHistoryTurns"
+            className={inputClassName}
+            type="number"
+            min={0}
+            max={20}
+            value={settings.chatHistoryTurns}
+            onChange={(e) => update('chatHistoryTurns', Number(e.target.value))}
+          />
+        </Field>
+        <Field label={t(lang, 'translationMode')} htmlFor="translationMode">
+          <select
+            id="translationMode"
+            className={inputClassName}
+            value={settings.translationMode}
+            onChange={(e) =>
+              update(
+                'translationMode',
+                e.target.value === 'overlay' ? 'overlay' : 'replace',
+              )
+            }
+          >
+            <option value="replace">{t(lang, 'modeReplace')}</option>
+            <option value="overlay">{t(lang, 'modeOverlay')}</option>
+          </select>
         </Field>
       </section>
 

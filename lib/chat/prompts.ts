@@ -1,5 +1,10 @@
 import type { ChatMessage } from '../translate/prompts';
 
+export interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface BuildChatPromptInput {
   systemPrompt: string;
   pageTitle: string;
@@ -7,6 +12,8 @@ export interface BuildChatPromptInput {
   pageText: string;
   elementContext?: string;
   question: string;
+  recentMessages?: ChatTurn[];
+  historyTurns?: number;
 }
 
 export function buildChatMessages(input: BuildChatPromptInput): ChatMessage[] {
@@ -30,9 +37,19 @@ export function buildChatMessages(input: BuildChatPromptInput): ChatMessage[] {
     contextParts.push('', 'Selected element context:', input.elementContext.trim());
   }
 
-  return [
+  const messages: ChatMessage[] = [
     { role: 'system', content: grounding },
     { role: 'user', content: contextParts.join('\n') },
-    { role: 'user', content: input.question },
   ];
+
+  const turns = Math.max(0, input.historyTurns ?? 0);
+  if (turns > 0 && input.recentMessages?.length) {
+    const slice = input.recentMessages.slice(-turns);
+    for (const turn of slice) {
+      messages.push({ role: turn.role, content: turn.content });
+    }
+  }
+
+  messages.push({ role: 'user', content: input.question });
+  return messages;
 }
