@@ -63,6 +63,18 @@ Record of meaningful choices made during development. Newest entries first withi
 
 **Decision:** Use `textContent` for page DOM writes. Chat markdown rendered with a sanitizing library (chosen in 0.4.0) — never raw `innerHTML` of model or page text.
 
+### Tailwind CSS v4 via Vite plugin
+
+**Decision:** Use Tailwind CSS v4 with `@tailwindcss/vite` wired in `wxt.config.ts`, and a single `assets/tailwind.css` entry imported by UI pages.
+
+**Why:** Matches current Tailwind defaults; avoids maintaining a separate `tailwind.config.js` for this project’s CSS-variable theme.
+
+### TypeScript 5.9 (not 7.x)
+
+**Decision:** Pin `typescript` to `~5.9.3`.
+
+**Why:** `typescript-eslint` peer range requires TypeScript &lt; 6.1 at the time of scaffolding.
+
 ---
 
 *Further decisions will be appended as milestones progress.*
