@@ -1,10 +1,12 @@
 import { extractPageText } from '../lib/extract/page-text';
+import { pickerActionLabels, t } from '../lib/i18n';
 import type {
   ContentRequest,
   ContentResponse,
   ExtensionResponse,
 } from '../lib/messaging/types';
 import { createPickerController } from '../lib/picker/controller';
+import type { Settings } from '../lib/settings/types';
 import { applyElementTranslation } from '../lib/translate/apply-element';
 import { createLazyTranslator, type LazyTranslateController } from '../lib/translate/lazy';
 import { createTranslatePortClient } from '../lib/translate/port-client';
@@ -19,6 +21,7 @@ export default defineContentScript({
     let translatePort: ReturnType<typeof createTranslatePortClient> | null = null;
     let translated = false;
     let busy = false;
+    let cachedSettings: Settings | null = null;
 
     const picker = createPickerController({
       onPick: ({ action, text }) => {
@@ -32,6 +35,10 @@ export default defineContentScript({
       onCancel: () => {
         void chrome.runtime.sendMessage({ type: 'PICKER_CANCELLED' });
       },
+      getActionLabels: () =>
+        pickerActionLabels(cachedSettings?.uiLanguage ?? 'en'),
+      getDir: () =>
+        isRtlLanguage(cachedSettings?.uiLanguage ?? 'en') ? 'rtl' : 'ltr',
     });
 
     chrome.runtime.onMessage.addListener((message: ContentRequest, _sender, sendResponse) => {
@@ -45,10 +52,17 @@ export default defineContentScript({
       })) as ExtensionResponse;
       if (!settingsRes.ok || !('settings' in settingsRes)) {
         throw new Error(
-          !settingsRes.ok ? settingsRes.error : 'Failed to load settings.',
+          !settingsRes.ok
+            ? settingsRes.error
+            : t(cachedSettings?.uiLanguage ?? 'en', 'errorSettingsLoad'),
         );
       }
+      cachedSettings = settingsRes.settings;
       return settingsRes.settings;
+    }
+
+    function uiLang() {
+      return cachedSettings?.uiLanguage ?? 'en';
     }
 
     async function handle(message: ContentRequest): Promise<ContentResponse> {
@@ -63,6 +77,7 @@ export default defineContentScript({
       }
 
       if (message.type === 'START_PICKER') {
+        await ensureSettings().catch(() => null);
         picker.start();
         return { ok: true, kind: 'status', translated, pickerActive: true };
       }
@@ -74,7 +89,10 @@ export default defineContentScript({
 
       if (message.type === 'TOGGLE_PICKER') {
         if (picker.active) picker.stop();
-        else picker.start();
+        else {
+          await ensureSettings().catch(() => null);
+          picker.start();
+        }
         return {
           ok: true,
           kind: 'status',
@@ -84,11 +102,12 @@ export default defineContentScript({
       }
 
       if (message.type === 'EXTRACT_PAGE_TEXT') {
+        await ensureSettings().catch(() => null);
         const extracted = extractPageText(document, 250_000);
         if (!extracted.text.trim()) {
           return {
             ok: false,
-            error: 'No readable text found on this page.',
+            error: t(uiLang(), 'errorNoPageText'),
             kind: 'empty',
           };
         }
@@ -112,9 +131,10 @@ export default defineContentScript({
           message.translation,
         );
         if (!ok) {
+          await ensureSettings().catch(() => null);
           return {
             ok: false,
-            error: 'Could not find the selected text on the page to apply the translation.',
+            error: t(uiLang(), 'errorApplyNotFound'),
             kind: 'error',
           };
         }
@@ -139,7 +159,12 @@ export default defineContentScript({
 
       if (message.type === 'TRANSLATE_PAGE') {
         if (busy) {
-          return { ok: false, error: 'Translation already in progress.', kind: 'busy' };
+          await ensureSettings().catch(() => null);
+          return {
+            ok: false,
+            error: t(uiLang(), 'errorTranslateBusy'),
+            kind: 'busy',
+          };
         }
 
         busy = true;
@@ -155,7 +180,7 @@ export default defineContentScript({
           if (!settings.translateModel) {
             return {
               ok: false,
-              error: 'No translate model selected. Open Settings and choose a model.',
+              error: t(uiLang(), 'errorNoTranslateModel'),
               kind: 'error',
             };
           }
@@ -167,8 +192,7 @@ export default defineContentScript({
           ) {
             return {
               ok: false,
-              error:
-                'This page already looks like the target language. Confirm to translate anyway.',
+              error: t(uiLang(), 'sameLanguageWarn'),
               kind: 'sameLanguage',
             };
           }
@@ -211,14 +235,17 @@ export default defineContentScript({
             pending: 0,
           });
           const msg =
-            error instanceof Error ? error.message : 'Unexpected translation error.';
+            error instanceof Error
+              ? error.message
+              : t(uiLang(), 'errorUnexpectedTranslate');
           return { ok: false, error: msg, kind: 'error' };
         } finally {
           busy = false;
         }
       }
 
-      return { ok: false, error: 'Unknown content request.', kind: 'error' };
+      await ensureSettings().catch(() => null);
+      return { ok: false, error: t(uiLang(), 'errorUnknownRequest'), kind: 'error' };
     }
   },
 });
