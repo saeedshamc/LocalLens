@@ -272,6 +272,53 @@ export function OptionsApp() {
       </section>
 
       <section className="flex flex-col gap-3 rounded-lg border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)]/80 p-4">
+        <h2 className="m-0 text-base font-semibold">{t(lang, 'sectionVoice')}</h2>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={settings.ttsEnabled}
+            onChange={(e) => update('ttsEnabled', e.target.checked)}
+          />
+          {t(lang, 'ttsEnabled')}
+        </label>
+        <Field label={t(lang, 'ttsRate')} htmlFor="ttsRate">
+          <input
+            id="ttsRate"
+            className={inputClassName}
+            type="number"
+            min={0.5}
+            max={2}
+            step={0.1}
+            value={settings.ttsRate}
+            onChange={(e) => update('ttsRate', Number(e.target.value))}
+          />
+        </Field>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={settings.autoSpeakReplies}
+            onChange={(e) => update('autoSpeakReplies', e.target.checked)}
+          />
+          {t(lang, 'autoSpeakReplies')}
+        </label>
+        <Field
+          label={t(lang, 'sttLang')}
+          htmlFor="sttLang"
+          hint={t(lang, 'sttLangHint')}
+        >
+          <input
+            id="sttLang"
+            className={inputClassName}
+            value={settings.sttLang}
+            onChange={(e) => update('sttLang', e.target.value)}
+            placeholder="fa-IR"
+            spellCheck={false}
+          />
+        </Field>
+        <p className="m-0 text-sm text-[var(--ll-muted)]">{t(lang, 'voicePrivacyNote')}</p>
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-lg border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)]/80 p-4">
         <h2 className="m-0 text-base font-semibold">{t(lang, 'sectionPrompts')}</h2>
         <Field label={t(lang, 'systemPromptTranslate')} htmlFor="systemPromptTranslate">
           <textarea

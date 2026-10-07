@@ -144,7 +144,9 @@ ollama pull bge-m3`}
           <li>{t(lang, 'helpFeature2')}</li>
           <li>{t(lang, 'helpFeature3')}</li>
           <li>{t(lang, 'helpFeature4')}</li>
+          <li>{t(lang, 'helpFeatureVoice')}</li>
         </ul>
+        <p className="m-0 mt-3 text-sm text-[var(--ll-muted)]">{t(lang, 'voicePrivacyNote')}</p>
       </HelpSection>
 
       <HelpSection title={t(lang, 'helpShortcutsTitle')}>
