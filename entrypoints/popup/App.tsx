@@ -29,7 +29,7 @@ export function PopupApp() {
       setUiLanguage(settings.uiLanguage);
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) {
-        setError('No active tab.');
+        setError(t(settings.uiLanguage, 'noActiveTab'));
         return;
       }
       setTabId(tab.id);
@@ -52,7 +52,8 @@ export function PopupApp() {
     })();
   }, []);
 
-  const dir = isRtlLanguage(uiLanguage) ? 'rtl' : 'ltr';
+  const lang = uiLanguage;
+  const dir = isRtlLanguage(lang) ? 'rtl' : 'ltr';
 
   const sendToTab = async (type: 'TRANSLATE_PAGE' | 'RESTORE_PAGE') => {
     if (tabId === null) return;
@@ -72,18 +73,13 @@ export function PopupApp() {
       setTranslated(res.translated);
       if (type === 'TRANSLATE_PAGE') {
         setStatus(
-          `Translated ${res.nodeCount ?? 0} text nodes` +
-            (res.fromCache !== undefined
-              ? ` (cache ${res.fromCache}, model ${res.fromModel ?? 0}).`
-              : '.'),
+          `Translated ${res.nodeCount ?? 0}+ visible nodes (lazy + dynamic).`,
         );
       } else {
-        setStatus('Original text restored.');
+        setStatus(t(lang, 'restoreOriginal'));
       }
     } catch {
-      setError(
-        'Could not reach the page. Reload the tab, then try again. LocalLens cannot run on restricted browser pages.',
-      );
+      setError(t(lang, 'reachPageError'));
     } finally {
       setBusy(false);
     }
@@ -106,10 +102,10 @@ export function PopupApp() {
       const active =
         res.ok && 'pickerActive' in res ? Boolean(res.pickerActive) : false;
       setPickerActive(active);
-      setStatus(active ? 'Element picker on — click an element (Esc to cancel).' : 'Element picker off.');
+      setStatus(active ? t(lang, 'pickerOn') : t(lang, 'pickerOff'));
       window.close();
     } catch {
-      setError('Could not toggle the element picker.');
+      setError(t(lang, 'reachPageError'));
     } finally {
       setBusy(false);
     }
@@ -121,7 +117,7 @@ export function PopupApp() {
       await chrome.sidePanel.open({ tabId });
       window.close();
     } catch {
-      setError('Could not open the side panel.');
+      setError(t(lang, 'reachPageError'));
     }
   };
 
@@ -133,22 +129,25 @@ export function PopupApp() {
         background:
           'radial-gradient(ellipse 90% 60% at 0% 0%, #d8efe6 0%, transparent 55%), var(--ll-bg)',
       }}
+      role="dialog"
+      aria-label={t(lang, 'appName')}
     >
       <header className="mb-3">
         <p className="m-0 text-xs font-semibold tracking-wide text-[var(--ll-accent)]">
-          LocalLens
+          {t(lang, 'appName')}
         </p>
-        <h1 className="m-0 text-base font-semibold">Page tools</h1>
+        <h1 className="m-0 text-base font-semibold">{t(lang, 'popupTitle')}</h1>
       </header>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2" role="group" aria-label={t(lang, 'popupTitle')}>
         <button
           type="button"
           className={buttonPrimaryClassName}
           disabled={busy || restricted}
+          aria-busy={busy}
           onClick={() => void sendToTab('TRANSLATE_PAGE')}
         >
-          {busy ? 'Working…' : 'Translate page'}
+          {busy ? t(lang, 'working') : t(lang, 'translatePage')}
         </button>
         <button
           type="button"
@@ -156,15 +155,16 @@ export function PopupApp() {
           disabled={busy || restricted || !translated}
           onClick={() => void sendToTab('RESTORE_PAGE')}
         >
-          Restore original
+          {t(lang, 'restoreOriginal')}
         </button>
         <button
           type="button"
           className={buttonSecondaryClassName}
           disabled={busy || restricted}
+          aria-pressed={pickerActive}
           onClick={() => void togglePicker()}
         >
-          {pickerActive ? 'Stop element picker' : 'Pick element'}
+          {pickerActive ? t(lang, 'stopPicker') : t(lang, 'pickElement')}
         </button>
         <button
           type="button"
@@ -172,7 +172,7 @@ export function PopupApp() {
           disabled={restricted || tabId === null}
           onClick={() => void openSidePanel()}
         >
-          Open side panel
+          {t(lang, 'openSidePanel')}
         </button>
         <a
           className={buttonSecondaryClassName}
@@ -180,7 +180,7 @@ export function PopupApp() {
           target="_blank"
           rel="noreferrer"
         >
-          {t(uiLanguage, 'optionsTitle')}
+          {t(lang, 'optionsTitle')}
         </a>
         <a
           className={buttonSecondaryClassName}
@@ -188,13 +188,11 @@ export function PopupApp() {
           target="_blank"
           rel="noreferrer"
         >
-          {t(uiLanguage, 'openHelp')}
+          {t(lang, 'openHelp')}
         </a>
       </div>
 
-      <p className="mt-3 m-0 text-[11px] text-[var(--ll-muted)]">
-        Shortcut: Alt+Shift+L · Right-click → LocalLens picker · Alt+↑ selects parent
-      </p>
+      <p className="mt-3 m-0 text-[11px] text-[var(--ll-muted)]">{t(lang, 'shortcutHint')}</p>
 
       {status ? (
         <p className="mt-2 m-0 text-xs text-[var(--ll-accent)]" role="status">

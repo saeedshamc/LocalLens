@@ -48,4 +48,31 @@ export const fa: Record<MessageKey, string> = {
   extensionId: 'شناسه افزونه',
   restartHint:
     'پس از تنظیم OLLAMA_ORIGINS، Ollama را کامل راه‌اندازی مجدد کنید تا تغییر اعمال شود.',
+  popupTitle: 'ابزارهای صفحه',
+  translatePage: 'ترجمه صفحه',
+  restoreOriginal: 'بازگردانی متن اصلی',
+  pickElement: 'انتخاب عنصر',
+  stopPicker: 'توقف انتخابگر',
+  openSidePanel: 'باز کردن پانل کناری',
+  working: 'در حال کار…',
+  pickerOn: 'انتخابگر روشن است — روی یک عنصر کلیک کنید (Esc برای لغو).',
+  pickerOff: 'انتخابگر خاموش شد.',
+  shortcutHint:
+    'میانبر: Alt+Shift+L · راست‌کلیک → LocalLens · Alt+↑ عنصر والد',
+  noActiveTab: 'زبانهٔ فعالی نیست.',
+  reachPageError:
+    'دسترسی به صفحه ممکن نیست. زبانه را دوباره بارگذاری کنید. روی صفحات داخلی مرورگر کار نمی‌کند.',
+  chatTitle: 'گفتگو با صفحه',
+  chatIntro:
+    'دربارهٔ این صفحه بپرسید. صفحات بلند با embeddings مرتبط‌ترین بخش‌ها را برمی‌گردانند.',
+  chatHistoryHint: 'تاریخچه برای هر زبانه و URL روی همین دستگاه نگه داشته می‌شود.',
+  chatPlaceholder: 'دربارهٔ این صفحه بپرسید…',
+  send: 'ارسال',
+  stop: 'توقف',
+  clearChat: 'پاک کردن گفتگو',
+  refreshPageContent: 'تازه‌سازی محتوای صفحه',
+  elementContext: 'زمینهٔ عنصر',
+  clear: 'پاک کردن',
+  you: 'شما',
+  loading: 'در حال بارگذاری…',
 };

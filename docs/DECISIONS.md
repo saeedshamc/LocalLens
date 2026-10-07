@@ -159,4 +159,14 @@ Record of meaningful choices made during development. Newest entries first withi
 
 ---
 
+## 2026-10-07 — Milestone 0.6.0
+
+### Lazy translation unit
+
+**Decision:** Observe block-level ancestors (`p`, headings, `li`, …) with IntersectionObserver; MutationObserver ingests newly inserted text.
+
+**Why:** Keeps service-worker batches small on long pages and covers SPA content that appears after the first paint.
+
+---
+
 *Further decisions will be appended as milestones progress.*

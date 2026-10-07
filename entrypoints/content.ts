@@ -1,25 +1,20 @@
 import { extractPageText } from '../lib/extract/page-text';
-import {
-  applyTranslations,
-  collectTranslatableTextNodes,
-  restoreOriginals,
-  type CollectableTextNode,
-} from '../lib/translate/dom';
 import type {
   ContentRequest,
   ContentResponse,
   ExtensionResponse,
 } from '../lib/messaging/types';
 import { createPickerController } from '../lib/picker/controller';
+import { createLazyTranslator, type LazyTranslateController } from '../lib/translate/lazy';
 import { isRtlLanguage } from '../lib/utils/rtl';
 
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_idle',
   main() {
-    let originals: CollectableTextNode[] | null = null;
-    let busy = false;
+    let lazy: LazyTranslateController | null = null;
     let translated = false;
+    let busy = false;
 
     const picker = createPickerController({
       onPick: ({ action, text }) => {
@@ -40,13 +35,25 @@ export default defineContentScript({
       return true;
     });
 
+    async function ensureSettings() {
+      const settingsRes = (await chrome.runtime.sendMessage({
+        type: 'GET_SETTINGS',
+      })) as ExtensionResponse;
+      if (!settingsRes.ok || !('settings' in settingsRes)) {
+        throw new Error(
+          !settingsRes.ok ? settingsRes.error : 'Failed to load settings.',
+        );
+      }
+      return settingsRes.settings;
+    }
+
     async function handle(message: ContentRequest): Promise<ContentResponse> {
       if (message.type === 'GET_STATUS') {
         return {
           ok: true,
           kind: 'status',
           translated,
-          nodeCount: originals?.length ?? 0,
+          nodeCount: lazy?.getOriginals().length ?? 0,
           pickerActive: picker.active,
         };
       }
@@ -95,45 +102,27 @@ export default defineContentScript({
       }
 
       if (message.type === 'RESTORE_PAGE') {
-        if (originals) restoreOriginals(originals);
-        originals = null;
+        lazy?.stop();
+        lazy?.restore();
+        lazy = null;
         translated = false;
+        busy = false;
         return { ok: true, kind: 'status', translated: false };
       }
 
       if (message.type === 'TRANSLATE_PAGE') {
-        if (busy) return { ok: false, error: 'Translation already in progress.', kind: 'busy' };
+        if (busy) {
+          return { ok: false, error: 'Translation already in progress.', kind: 'busy' };
+        }
 
         busy = true;
         try {
-          if (translated && originals) {
-            restoreOriginals(originals);
-            originals = null;
-            translated = false;
-          }
+          lazy?.stop();
+          lazy?.restore();
+          lazy = null;
+          translated = false;
 
-          const nodes = collectTranslatableTextNodes();
-          if (nodes.length === 0) {
-            return {
-              ok: false,
-              error: 'No translatable text found on this page.',
-              kind: 'empty',
-            };
-          }
-
-          const settingsRes = (await chrome.runtime.sendMessage({
-            type: 'GET_SETTINGS',
-          })) as ExtensionResponse;
-
-          if (!settingsRes.ok || !('settings' in settingsRes)) {
-            return {
-              ok: false,
-              error: !settingsRes.ok ? settingsRes.error : 'Failed to load settings.',
-              kind: 'error',
-            };
-          }
-
-          const settings = settingsRes.settings;
+          const settings = await ensureSettings();
           if (!settings.translateModel) {
             return {
               ok: false,
@@ -142,37 +131,38 @@ export default defineContentScript({
             };
           }
 
-          const texts = nodes.map((n) => n.text);
-          const batchRes = (await chrome.runtime.sendMessage({
-            type: 'TRANSLATE_BATCH',
-            texts,
-          })) as ExtensionResponse;
-
-          if (!batchRes.ok || !('translations' in batchRes)) {
-            return {
-              ok: false,
-              error: !batchRes.ok ? batchRes.error : 'Translation failed.',
-              kind: 'error',
-            };
-          }
-
-          originals = nodes;
-          applyTranslations(
-            nodes,
-            batchRes.translations,
-            isRtlLanguage(settings.targetLanguage),
-          );
+          const rtl = isRtlLanguage(settings.targetLanguage);
+          lazy = createLazyTranslator({
+            rtl,
+            translateBatch: async (texts) => {
+              const batchRes = (await chrome.runtime.sendMessage({
+                type: 'TRANSLATE_BATCH',
+                texts,
+              })) as ExtensionResponse;
+              if (!batchRes.ok || !('translations' in batchRes)) {
+                throw new Error(
+                  !batchRes.ok ? batchRes.error : 'Translation failed.',
+                );
+              }
+              return batchRes.translations;
+            },
+          });
+          lazy.start();
           translated = true;
+
+          // Give the observer a tick to queue first visible blocks.
+          await new Promise((r) => setTimeout(r, 50));
 
           return {
             ok: true,
             kind: 'status',
             translated: true,
-            nodeCount: nodes.length,
-            fromCache: batchRes.fromCache,
-            fromModel: batchRes.fromModel,
+            nodeCount: lazy.translatedCount,
           };
         } catch (error) {
+          lazy?.stop();
+          lazy = null;
+          translated = false;
           const msg =
             error instanceof Error ? error.message : 'Unexpected translation error.';
           return { ok: false, error: msg, kind: 'error' };

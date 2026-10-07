@@ -5,6 +5,7 @@ import {
   inputClassName,
 } from '../../components/Field';
 import { renderSafeChatText } from '../../lib/chat/safe-text';
+import { t } from '../../lib/i18n';
 import type {
   ChatPortClientMessage,
   ChatPortServerMessage,
@@ -279,9 +280,9 @@ export function SidePanelApp() {
     >
       <header className="border-b border-[var(--ll-border)] px-4 py-3">
         <p className="m-0 text-xs font-semibold tracking-wide text-[var(--ll-accent)]">
-          LocalLens
+          {t(uiLanguage, 'appName')}
         </p>
-        <h1 className="m-0 text-lg font-semibold">Chat with page</h1>
+        <h1 className="m-0 text-lg font-semibold">{t(uiLanguage, 'chatTitle')}</h1>
         {pageMeta ? (
           <p className="m-0 mt-1 text-xs text-[var(--ll-muted)]">
             {pageMeta.title || pageMeta.url} · {pageMeta.chars} chars
@@ -293,9 +294,7 @@ export function SidePanelApp() {
           </p>
         ) : (
           <p className="m-0 mt-1 text-xs text-[var(--ll-muted)]">
-            {pageUrl
-              ? 'History is kept per tab and URL on this device.'
-              : 'Answers use the active tab’s extracted content via local Ollama.'}
+            {pageUrl ? t(uiLanguage, 'chatHistoryHint') : t(uiLanguage, 'chatIntro')}
           </p>
         )}
       </header>
@@ -303,7 +302,7 @@ export function SidePanelApp() {
       {elementContext ? (
         <div className="mx-4 mt-3 rounded-md border border-[var(--ll-border)] bg-[var(--ll-accent-soft)]/60 px-3 py-2 text-xs">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <strong>Element context</strong>
+            <strong>{t(uiLanguage, 'elementContext')}</strong>
             <button
               type="button"
               className={buttonSecondaryClassName}
@@ -311,7 +310,7 @@ export function SidePanelApp() {
                 void clearPendingElementContext().then(() => setElementContext(null));
               }}
             >
-              Clear
+              {t(uiLanguage, 'clear')}
             </button>
           </div>
           <p className="m-0 max-h-24 overflow-auto whitespace-pre-wrap">
@@ -322,10 +321,7 @@ export function SidePanelApp() {
 
       <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
-          <p className="m-0 text-sm text-[var(--ll-muted)]">
-            Ask a question about this page. Long pages retrieve the most relevant
-            passages with embeddings.
-          </p>
+          <p className="m-0 text-sm text-[var(--ll-muted)]">{t(uiLanguage, 'chatIntro')}</p>
         ) : null}
         {messages.map((message) => (
           <div
@@ -337,7 +333,7 @@ export function SidePanelApp() {
             }
           >
             <p className="m-0 mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ll-muted)]">
-              {message.role === 'user' ? 'You' : 'LocalLens'}
+              {message.role === 'user' ? t(uiLanguage, 'you') : t(uiLanguage, 'appName')}
               {message.streaming ? ' · …' : ''}
             </p>
             <div className="leading-relaxed">
@@ -360,14 +356,14 @@ export function SidePanelApp() {
             className={buttonSecondaryClassName}
             onClick={() => void refreshContext()}
           >
-            Refresh page content
+            {t(uiLanguage, 'refreshPageContent')}
           </button>
           <button type="button" className={buttonSecondaryClassName} onClick={clearChat}>
-            Clear chat
+            {t(uiLanguage, 'clearChat')}
           </button>
           {streaming ? (
             <button type="button" className={buttonSecondaryClassName} onClick={stop}>
-              Stop
+              {t(uiLanguage, 'stop')}
             </button>
           ) : null}
         </div>
@@ -375,7 +371,8 @@ export function SidePanelApp() {
           <textarea
             className={`${inputClassName} min-h-[72px] resize-y`}
             value={input}
-            placeholder="Ask about this page…"
+            placeholder={t(uiLanguage, 'chatPlaceholder')}
+            aria-label={t(uiLanguage, 'chatPlaceholder')}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -391,7 +388,7 @@ export function SidePanelApp() {
             disabled={streaming || !input.trim() || tabId === null}
             onClick={ask}
           >
-            Send
+            {t(uiLanguage, 'send')}
           </button>
         </div>
       </footer>

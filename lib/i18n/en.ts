@@ -46,6 +46,33 @@ export const en = {
   extensionId: 'Extension ID',
   restartHint:
     'After setting OLLAMA_ORIGINS, fully restart Ollama so the change takes effect.',
+  popupTitle: 'Page tools',
+  translatePage: 'Translate page',
+  restoreOriginal: 'Restore original',
+  pickElement: 'Pick element',
+  stopPicker: 'Stop element picker',
+  openSidePanel: 'Open side panel',
+  working: 'Working…',
+  pickerOn: 'Element picker on — click an element (Esc to cancel).',
+  pickerOff: 'Element picker off.',
+  shortcutHint:
+    'Shortcut: Alt+Shift+L · Right-click → LocalLens picker · Alt+↑ selects parent',
+  noActiveTab: 'No active tab.',
+  reachPageError:
+    'Could not reach the page. Reload the tab, then try again. LocalLens cannot run on restricted browser pages.',
+  chatTitle: 'Chat with page',
+  chatIntro:
+    'Ask a question about this page. Long pages retrieve the most relevant passages with embeddings.',
+  chatHistoryHint: 'History is kept per tab and URL on this device.',
+  chatPlaceholder: 'Ask about this page…',
+  send: 'Send',
+  stop: 'Stop',
+  clearChat: 'Clear chat',
+  refreshPageContent: 'Refresh page content',
+  elementContext: 'Element context',
+  clear: 'Clear',
+  you: 'You',
+  loading: 'Loading…',
 } as const;
 
 export type MessageKey = keyof typeof en;
