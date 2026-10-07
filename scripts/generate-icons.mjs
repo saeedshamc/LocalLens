@@ -28,19 +28,64 @@ function chunk(type, data) {
   return Buffer.concat([len, typeB, data, crc]);
 }
 
+/** Draw a lens ring + L mark on a warm background. */
 function png(size) {
   const raw = Buffer.alloc((size * 4 + 1) * size);
+  const cx = size / 2;
+  const cy = size / 2;
+  const outer = size * 0.42;
+  const inner = size * 0.28;
+  const stroke = Math.max(1.2, size * 0.07);
+
   for (let y = 0; y < size; y++) {
     raw[y * (size * 4 + 1)] = 0;
     for (let x = 0; x < size; x++) {
       const i = y * (size * 4 + 1) + 1 + x * 4;
-      const cx = x - size / 2;
-      const cy = y - size / 2;
-      const r = Math.sqrt(cx * cx + cy * cy);
-      const on = r < size * 0.42;
-      raw[i] = on ? 15 : 247;
-      raw[i + 1] = on ? 110 : 244;
-      raw[i + 2] = on ? 86 : 239;
+      const dx = x - cx + 0.5;
+      const dy = y - cy + 0.5;
+      const r = Math.sqrt(dx * dx + dy * dy);
+
+      // Soft cream background
+      let R = 247;
+      let G = 244;
+      let B = 239;
+
+      // Outer fill disk
+      if (r <= outer) {
+        R = 216;
+        G = 239;
+        B = 230;
+      }
+      // Ring stroke
+      if (Math.abs(r - outer) <= stroke * 0.55 || Math.abs(r - inner) <= stroke * 0.35) {
+        R = 15;
+        G = 110;
+        B = 86;
+      }
+      // Inner clear
+      if (r < inner - stroke * 0.35) {
+        R = 255;
+        G = 250;
+        B = 243;
+      }
+
+      // Letter L
+      const lx0 = cx - size * 0.12;
+      const lx1 = cx + size * 0.14;
+      const ly0 = cy - size * 0.16;
+      const ly1 = cy + size * 0.16;
+      const thick = Math.max(1.5, size * 0.08);
+      const onStem = x >= lx0 && x <= lx0 + thick && y >= ly0 && y <= ly1;
+      const onBase = y >= ly1 - thick && y <= ly1 && x >= lx0 && x <= lx1;
+      if (onStem || onBase) {
+        R = 15;
+        G = 110;
+        B = 86;
+      }
+
+      raw[i] = R;
+      raw[i + 1] = G;
+      raw[i + 2] = B;
       raw[i + 3] = 255;
     }
   }
