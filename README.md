@@ -36,9 +36,22 @@ npm run zip
 ```
 
 - Unpacked build: `.output/chrome-mv3`
-- Zip archive: `.output/chrome-mv3-*.zip` (from `wxt zip`)
+- Zip archive: from `npm run zip` under `.output/`
 
 Then Chrome → Extensions → Developer mode → **Load unpacked** → select `.output/chrome-mv3`.
+
+### Firefox (temporary)
+
+```bash
+npm run build:firefox
+# or: npm run zip:firefox
+```
+
+1. Open `about:debugging#/runtime/this-firefox`
+2. **Load Temporary Add-on…**
+3. Select `.output/firefox-mv3/manifest.json`
+
+Side panel support depends on Firefox version; use the popup and options if the sidebar UI is unavailable.
 
 ## First-time Ollama CORS setup
 
@@ -67,14 +80,17 @@ Then quit Ollama from the tray and start it again.
 
 ## Scripts
 
-| Script            | Description                |
-|-------------------|----------------------------|
-| `npm run dev`     | WXT development mode       |
-| `npm run build`   | Production build           |
-| `npm run zip`     | Build and package a zip    |
-| `npm run lint`    | ESLint                     |
-| `npm run typecheck` | TypeScript `--noEmit`    |
-| `npm run test`    | Vitest unit tests          |
+| Script               | Description                     |
+|----------------------|---------------------------------|
+| `npm run dev`        | WXT development mode            |
+| `npm run build`      | Production build (Chrome)       |
+| `npm run build:firefox` | Production build (Firefox)   |
+| `npm run zip`        | Build and package a Chrome zip  |
+| `npm run zip:firefox`| Build and package a Firefox zip |
+| `npm run icons`      | Regenerate `public/icon/*.png`  |
+| `npm run lint`       | ESLint                          |
+| `npm run typecheck`  | TypeScript `--noEmit`           |
+| `npm run test`       | Vitest unit tests               |
 
 ## Architecture (short)
 
@@ -87,6 +103,8 @@ See [docs/PLAN.md](./docs/PLAN.md) and [docs/DECISIONS.md](./docs/DECISIONS.md).
 ## Privacy
 
 LocalLens only talks to the Ollama host you configure (default localhost). Page text and chat stay on your device. There is no analytics and no external network dependency beyond that host.
+
+Full policy: [docs/PRIVACY.md](./docs/PRIVACY.md). Store listing checklist: [docs/STORE.md](./docs/STORE.md).
 
 ## License
 

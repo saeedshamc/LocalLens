@@ -36,9 +36,22 @@ npm run zip
 ```
 
 - بیلد unpacked: `.output/chrome-mv3`
-- آرشیو zip: خروجی `wxt zip`
+- آرشیو zip: خروجی `npm run zip` در `.output/`
 
 سپس در کروم: Extensions → Developer mode → **Load unpacked** → انتخاب `.output/chrome-mv3`.
+
+### فایرفاکس (موقت)
+
+```bash
+npm run build:firefox
+# یا: npm run zip:firefox
+```
+
+1. `about:debugging#/runtime/this-firefox` را باز کنید
+2. **Load Temporary Add-on…**
+3. فایل `.output/firefox-mv3/manifest.json` را انتخاب کنید
+
+پشتیبانی side panel به نسخهٔ فایرفاکس بستگی دارد؛ در صورت نبودن، از popup و Settings استفاده کنید.
 
 ## راه‌اندازی CORS برای Ollama
 
@@ -67,18 +80,23 @@ setx OLLAMA_ORIGINS "chrome-extension://YOUR_EXTENSION_ID"
 
 ## اسکریپت‌ها
 
-| اسکریپت             | توضیح              |
-|---------------------|---------------------|
-| `npm run dev`       | حالت توسعه WXT      |
-| `npm run build`     | بیلد تولید          |
-| `npm run zip`       | بیلد و بسته‌بندی zip |
-| `npm run lint`      | ESLint              |
-| `npm run typecheck` | TypeScript          |
-| `npm run test`      | تست‌های Vitest      |
+| اسکریپت                | توضیح                         |
+|------------------------|-------------------------------|
+| `npm run dev`          | حالت توسعه WXT                |
+| `npm run build`        | بیلد تولید (کروم)             |
+| `npm run build:firefox`| بیلد تولید (فایرفاکس)         |
+| `npm run zip`          | بسته‌بندی zip کروم            |
+| `npm run zip:firefox`  | بسته‌بندی zip فایرفاکس        |
+| `npm run icons`        | بازتولید آیکن‌ها              |
+| `npm run lint`         | ESLint                        |
+| `npm run typecheck`    | TypeScript                    |
+| `npm run test`         | تست‌های Vitest                |
 
 ## حریم خصوصی
 
 LocalLens فقط با میزبان Ollama که تنظیم کرده‌اید صحبت می‌کند (پیش‌فرض localhost). متن صفحه و گفتگو روی دستگاه شما می‌ماند. هیچ تحلیلی و هیچ وابستگی شبکه‌ای بیرونی جز همان میزبان وجود ندارد.
+
+سیاست کامل: [docs/PRIVACY.md](./docs/PRIVACY.md). چک‌لیست استور: [docs/STORE.md](./docs/STORE.md).
 
 ## مجوز
 
