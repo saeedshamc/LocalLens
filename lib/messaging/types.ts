@@ -8,9 +8,11 @@ export type ExtensionRequest =
   | { type: 'TRANSLATE_BATCH'; texts: string[]; requestId?: string }
   | {
       type: 'ELEMENT_ACTION';
-      action: Exclude<PickerAction, 'ask'>;
+      action: Exclude<PickerAction, 'ask' | 'read' | 'translateRead'>;
       text: string;
     }
+  | { type: 'SPEAK_TEXT'; text: string; lang?: string }
+  | { type: 'STOP_SPEAK' }
   | {
       type: 'ASK_ABOUT_ELEMENT';
       text: string;

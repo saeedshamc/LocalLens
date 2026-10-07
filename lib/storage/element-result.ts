@@ -1,13 +1,15 @@
 const KEY = 'locallens.lastElementResult';
 
 export interface ElementActionResult {
-  action: 'translate' | 'explain' | 'summarize';
+  action: 'translate' | 'explain' | 'summarize' | 'read' | 'translateRead';
   result?: string;
   error?: string;
   text: string;
   url: string;
   tabId: number;
   createdAt: number;
+  /** True when TTS was started for this result. */
+  spoken?: boolean;
 }
 
 export async function setElementActionResult(

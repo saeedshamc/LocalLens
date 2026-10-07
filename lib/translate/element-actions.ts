@@ -2,10 +2,17 @@ import { ollamaChat, OllamaClientError } from '../ollama/client';
 import type { Settings } from '../settings/types';
 import { translateBatch } from './engine';
 
-export type ElementActionKind = 'translate' | 'explain' | 'summarize';
+export type ElementActionKind =
+  | 'translate'
+  | 'explain'
+  | 'summarize'
+  | 'read'
+  | 'translateRead';
 
-function actionSystemPrompt(kind: ElementActionKind, settings: Settings): string {
-  if (kind === 'translate') return settings.systemPromptTranslate;
+function actionSystemPrompt(
+  kind: Exclude<ElementActionKind, 'read' | 'translate' | 'translateRead'>,
+  settings: Settings,
+): string {
   if (kind === 'explain') {
     return `Explain the selected page content clearly in the user's preferred language (${settings.targetLanguage}). Be concise. Do not invent facts beyond the provided text.`;
   }
@@ -23,7 +30,11 @@ export async function runElementAction(
     throw new OllamaClientError('parse', 'The selected element has no text content.');
   }
 
-  if (kind === 'translate') {
+  if (kind === 'read') {
+    return trimmed;
+  }
+
+  if (kind === 'translate' || kind === 'translateRead') {
     const result = await translateBatch({ texts: [trimmed], settings, signal });
     return result.translations[0] ?? trimmed;
   }

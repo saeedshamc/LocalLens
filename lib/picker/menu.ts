@@ -1,4 +1,10 @@
-export type PickerAction = 'translate' | 'explain' | 'summarize' | 'ask';
+export type PickerAction =
+  | 'translate'
+  | 'explain'
+  | 'summarize'
+  | 'ask'
+  | 'read'
+  | 'translateRead';
 
 export interface ActionMenuOptions {
   x: number;
@@ -13,7 +19,14 @@ export interface ActionMenuHandle {
   destroy: () => void;
 }
 
-const ACTION_IDS: PickerAction[] = ['translate', 'explain', 'summarize', 'ask'];
+const ACTION_IDS: PickerAction[] = [
+  'translate',
+  'explain',
+  'summarize',
+  'ask',
+  'read',
+  'translateRead',
+];
 
 /** Shadow-DOM action menu so host page CSS cannot break layout. */
 export function showActionMenu(options: ActionMenuOptions): ActionMenuHandle {
@@ -77,7 +90,7 @@ export function showActionMenu(options: ActionMenuOptions): ActionMenuHandle {
   document.documentElement.appendChild(host);
 
   const left = Math.min(options.x, window.innerWidth - 200);
-  const top = Math.min(options.y, window.innerHeight - 180);
+  const top = Math.min(options.y, window.innerHeight - 280);
   menu.style.left = `${Math.max(8, left)}px`;
   menu.style.top = `${Math.max(8, top)}px`;
 
