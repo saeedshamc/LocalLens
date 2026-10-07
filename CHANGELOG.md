@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-10-07
+
+### Added
+
+- Ollama chat client for non-streaming `/api/chat` with JSON-schema `format`, temperature, `num_ctx`, and `keep_alive`.
+- Translation engine with character/item batching, placeholder protection, response length validation, one retry, and per-item fallback.
+- IndexedDB translation cache keyed by hash(text + model + target language).
+- Content script TreeWalker over text nodes (skipping script/style/code/pre/noscript), whole-page translate, restore original, and RTL `dir` for RTL targets.
+- Popup actions: Translate page, Restore original, links to Settings and Help.
+- Restricted-page detection for `chrome://`, Web Store, and similar URLs.
+- Unit tests for batching, parsing, placeholders, prompts, hashing, and restricted URLs.
+
 ## [0.1.0] - 2026-10-07
 
 ### Added
@@ -16,4 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Open Help on first install via `chrome.runtime.onInstalled`.
 - Unit tests for settings normalization, connection classification, RTL detection, and origins command builders.
 
+[0.2.0]: https://github.com/saeedshamc/LocalLens/releases/tag/v0.2.0
 [0.1.0]: https://github.com/saeedshamc/LocalLens/releases/tag/v0.1.0
+

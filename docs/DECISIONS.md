@@ -77,4 +77,26 @@ Record of meaningful choices made during development. Newest entries first withi
 
 ---
 
+## 2026-10-07 — Milestone 0.2.0
+
+### Translation batch budgets
+
+**Decision:** Default soft caps of ~1800 characters and 24 items per Ollama request.
+
+**Why:** Keeps service-worker work short under MV3 while still amortizing prompt overhead; oversized single nodes become their own batch.
+
+### Placeholder tokens before translate
+
+**Decision:** Mask URLs, emails, inline `` `code` ``, and numbers as `⟦PHn⟧` before calling the model; restore after parse.
+
+**Why:** Reduces accidental mutation of stable tokens even when the system prompt asks to preserve them.
+
+### Options page opens in a tab
+
+**Decision:** Force `options_ui.open_in_tab = true` via the `build:manifestGenerated` WXT hook.
+
+**Why:** WXT’s default options entry sets `open_in_tab: false`; a full settings form needs a normal tab.
+
+---
+
 *Further decisions will be appended as milestones progress.*
