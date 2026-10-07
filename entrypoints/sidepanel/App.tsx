@@ -5,7 +5,7 @@ import {
   inputClassName,
 } from '../../components/Field';
 import { renderSafeChatText } from '../../lib/chat/safe-text';
-import { t } from '../../lib/i18n';
+import { pickerActionLabel, t } from '../../lib/i18n';
 import type {
   ChatPortClientMessage,
   ChatPortServerMessage,
@@ -347,8 +347,9 @@ export function SidePanelApp() {
 
       {elementResult ? (
         <div className="mx-4 mt-3 rounded-md border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)] px-3 py-2 text-sm">
-          <h2 className="m-0 text-sm font-semibold capitalize">
-            {t(uiLanguage, 'elementPreview')} — {elementResult.action}
+          <h2 className="m-0 text-sm font-semibold">
+            {t(uiLanguage, 'elementPreview')} —{' '}
+            {pickerActionLabel(uiLanguage, elementResult.action)}
           </h2>
           {elementResult.error ? (
             <p className="m-0 mt-2 text-[var(--ll-danger)]" role="alert">

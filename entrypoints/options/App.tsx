@@ -24,14 +24,14 @@ import {
 } from '../../lib/storage/cache-admin';
 
 const TARGET_LANGUAGE_OPTIONS = [
-  { value: 'fa', label: 'Persian (fa)' },
-  { value: 'en', label: 'English (en)' },
-  { value: 'ar', label: 'Arabic (ar)' },
-  { value: 'de', label: 'German (de)' },
-  { value: 'es', label: 'Spanish (es)' },
-  { value: 'fr', label: 'French (fr)' },
-  { value: 'tr', label: 'Turkish (tr)' },
-  { value: 'zh', label: 'Chinese (zh)' },
+  { value: 'fa', labelKey: 'targetLangFa' as const },
+  { value: 'en', labelKey: 'targetLangEn' as const },
+  { value: 'ar', labelKey: 'targetLangAr' as const },
+  { value: 'de', labelKey: 'targetLangDe' as const },
+  { value: 'es', labelKey: 'targetLangEs' as const },
+  { value: 'fr', labelKey: 'targetLangFr' as const },
+  { value: 'tr', labelKey: 'targetLangTr' as const },
+  { value: 'zh', labelKey: 'targetLangZh' as const },
 ];
 
 export function OptionsApp() {
@@ -69,7 +69,7 @@ export function OptionsApp() {
   if (!settings) {
     return (
       <div className="p-8 text-sm text-[var(--ll-muted)]" role="status">
-        Loading…
+        {t('en', 'loading')}
       </div>
     );
   }
@@ -205,7 +205,7 @@ export function OptionsApp() {
           >
             {TARGET_LANGUAGE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.label}
+                {t(lang, opt.labelKey)}
               </option>
             ))}
           </select>
@@ -370,8 +370,8 @@ export function OptionsApp() {
             value={settings.uiLanguage}
             onChange={(e) => update('uiLanguage', e.target.value as UiLanguage)}
           >
-            <option value="en">English</option>
-            <option value="fa">فارسی</option>
+            <option value="en">{t(lang, 'langUiEn')}</option>
+            <option value="fa">{t(lang, 'langUiFa')}</option>
           </select>
         </Field>
         <p className="m-0 text-sm text-[var(--ll-muted)]">{t(lang, 'shortcutInfo')}</p>

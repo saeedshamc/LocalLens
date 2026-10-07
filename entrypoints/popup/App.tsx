@@ -9,8 +9,8 @@ import type { ContentResponse, ExtensionResponse } from '../../lib/messaging/typ
 import { getSettings, saveSettings } from '../../lib/settings/storage';
 import type { Settings, UiLanguage } from '../../lib/settings/types';
 import {
-  RESTRICTED_PAGE_MESSAGE,
   isRestrictedUrl,
+  restrictedPageMessage,
 } from '../../lib/utils/restricted';
 import { isRtlLanguage } from '../../lib/utils/rtl';
 
@@ -61,7 +61,7 @@ export function PopupApp() {
       setTabId(tab.id);
       if (isRestrictedUrl(tab.url)) {
         setRestricted(true);
-        setError(RESTRICTED_PAGE_MESSAGE);
+        setError(restrictedPageMessage(settings.uiLanguage));
         return;
       }
       try {
@@ -128,7 +128,7 @@ export function PopupApp() {
         return;
       }
       if (res.kind !== 'status') {
-        setError('Unexpected response from the page.');
+        setError(t(lang, 'unexpectedPageResponse'));
         return;
       }
       setTranslated(res.translated);
@@ -160,7 +160,7 @@ export function PopupApp() {
         tabId,
       })) as ExtensionResponse | ContentResponse;
       if (!res.ok) {
-        setError('error' in res ? res.error : 'Picker failed.');
+        setError('error' in res ? res.error : t(lang, 'pickerFailed'));
         return;
       }
       const active =
