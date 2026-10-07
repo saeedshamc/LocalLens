@@ -61,6 +61,8 @@ export const fa: Record<MessageKey, string> = {
   helpFeature3: 'چت پانل کناری بر اساس محتوای صفحه با پاسخ‌های استریم‌شده.',
   helpFeature4:
     'همه‌چیز روی دستگاه شما از طریق Ollama محلی می‌ماند — بدون کلید API ابری.',
+  helpFeatureVoice:
+    'بلندخوانی / ترجمه و بلندخوانی روی عناصر انتخاب‌شده، به‌همراه ورودی صوتی اختیاری در گفتگو (نکتهٔ حریم خصوصی را ببینید).',
   helpShortcutsTitle: 'میانبرها',
   helpShortcutPicker:
     'میانبر پیش‌فرض انتخابگر: Alt+Shift+L. همچنین از منوی راست‌کلیک: LocalLens → روشن/خاموش کردن انتخابگر.',
@@ -145,6 +147,23 @@ export const fa: Record<MessageKey, string> = {
   actionExplain: 'توضیح',
   actionSummarize: 'خلاصه',
   actionAsk: 'پرسش در گفتگو',
+  actionRead: 'بلندخوانی',
+  actionTranslateRead: 'ترجمه و بلندخوانی',
+  sectionVoice: 'صدا',
+  ttsEnabled: 'فعال‌سازی بلندخوانی (صداهای سیستم)',
+  ttsRate: 'سرعت گفتار',
+  autoSpeakReplies: 'خواندن خودکار پاسخ‌های گفتگو',
+  sttLang: 'زبان ورودی صوتی (STT)',
+  sttLangHint: 'خالی = همان زبان رابط. مثال: fa-IR یا en-US.',
+  voicePrivacyNote:
+    'بلندخوانی از صداهای سیستم رایانه استفاده می‌کند (محلی). تایپ صوتی از Speech Recognition مرورگر استفاده می‌کند — در کروم ممکن است صدا به گوگل ارسال شود. اگر ورودی کاملاً آفلاین می‌خواهید، تایپ کنید.',
+  speak: 'بخوان',
+  stopSpeak: 'توقف خواندن',
+  listening: 'در حال گوش دادن…',
+  voiceInput: 'ورودی صوتی',
+  voiceNotSupported: 'تشخیص گفتار در این مرورگر در دسترس نیست.',
+  spokeAloud: 'در حال بلندخوانی…',
+  ttsDisabled: 'بلندخوانی در تنظیمات خاموش است.',
   contextMenuPicker: 'LocalLens: روشن/خاموش کردن انتخابگر',
   errorNoPageText: 'متن خوانایی در این صفحه پیدا نشد.',
   errorApplyNotFound: 'متن انتخاب‌شده برای اعمال ترجمه روی صفحه پیدا نشد.',

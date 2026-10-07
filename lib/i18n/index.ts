@@ -26,6 +26,8 @@ const ACTION_KEYS: Record<PickerAction, MessageKey> = {
   explain: 'actionExplain',
   summarize: 'actionSummarize',
   ask: 'actionAsk',
+  read: 'actionRead',
+  translateRead: 'actionTranslateRead',
 };
 
 export function pickerActionLabel(lang: UiLanguage, action: PickerAction): string {
@@ -40,6 +42,8 @@ export function pickerActionLabels(
     explain: t(lang, 'actionExplain'),
     summarize: t(lang, 'actionSummarize'),
     ask: t(lang, 'actionAsk'),
+    read: t(lang, 'actionRead'),
+    translateRead: t(lang, 'actionTranslateRead'),
   };
 }
 

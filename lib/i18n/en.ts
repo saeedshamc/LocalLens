@@ -59,6 +59,8 @@ export const en = {
   helpFeature3: 'Side panel chat grounded on the current page, with streamed answers.',
   helpFeature4:
     'Everything stays on your machine via local Ollama — no cloud API keys.',
+  helpFeatureVoice:
+    'Read aloud / translate & read on selected elements, plus optional voice input in chat (see privacy note).',
   helpShortcutsTitle: 'Shortcuts',
   helpShortcutPicker:
     'Default picker shortcut: Alt+Shift+L. You can also use the right-click menu: LocalLens → toggle element picker.',
@@ -143,6 +145,23 @@ export const en = {
   actionExplain: 'Explain',
   actionSummarize: 'Summarize',
   actionAsk: 'Ask in chat',
+  actionRead: 'Read aloud',
+  actionTranslateRead: 'Translate & read',
+  sectionVoice: 'Voice',
+  ttsEnabled: 'Enable read aloud (system voices)',
+  ttsRate: 'Speech rate',
+  autoSpeakReplies: 'Auto-speak chat replies',
+  sttLang: 'Voice input language (STT)',
+  sttLangHint: 'Empty = same as UI language. Example: fa-IR or en-US.',
+  voicePrivacyNote:
+    'Read aloud uses your computer’s system voices (local). Voice typing uses the browser Speech Recognition API — in Chrome this may send audio to Google. Prefer typing if you need fully offline input.',
+  speak: 'Speak',
+  stopSpeak: 'Stop speaking',
+  listening: 'Listening…',
+  voiceInput: 'Voice input',
+  voiceNotSupported: 'Speech recognition is not available in this browser.',
+  spokeAloud: 'Reading aloud…',
+  ttsDisabled: 'Read aloud is disabled in Settings.',
   contextMenuPicker: 'LocalLens: Toggle element picker',
   errorNoPageText: 'No readable text found on this page.',
   errorApplyNotFound:
