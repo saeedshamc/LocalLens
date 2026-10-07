@@ -49,6 +49,9 @@ export const fa: Record<MessageKey, string> = {
   restartHint:
     'پس از تنظیم OLLAMA_ORIGINS، Ollama را کامل راه‌اندازی مجدد کنید تا تغییر اعمال شود.',
   popupTitle: 'ابزارهای صفحه',
+  popupModels: 'مدل‌ها',
+  modelSaved: 'مدل ذخیره شد.',
+  modelsLoadError: 'لیست مدل‌ها گرفته نشد. Ollama را در تنظیمات بررسی کنید.',
   translatePage: 'ترجمه صفحه',
   restoreOriginal: 'بازگردانی متن اصلی',
   pickElement: 'انتخاب عنصر',

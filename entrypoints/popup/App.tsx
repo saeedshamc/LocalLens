@@ -3,10 +3,11 @@ import {
   buttonPrimaryClassName,
   buttonSecondaryClassName,
 } from '../../components/Field';
+import { ModelSelect } from '../../components/ModelSelect';
 import { t } from '../../lib/i18n';
 import type { ContentResponse, ExtensionResponse } from '../../lib/messaging/types';
-import { getSettings } from '../../lib/settings/storage';
-import type { UiLanguage } from '../../lib/settings/types';
+import { getSettings, saveSettings } from '../../lib/settings/storage';
+import type { Settings, UiLanguage } from '../../lib/settings/types';
 import {
   RESTRICTED_PAGE_MESSAGE,
   isRestrictedUrl,
@@ -15,6 +16,10 @@ import { isRtlLanguage } from '../../lib/utils/rtl';
 
 export function PopupApp() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>('en');
+  const [translateModel, setTranslateModel] = useState('');
+  const [chatModel, setChatModel] = useState('');
+  const [models, setModels] = useState<string[]>([]);
+  const [modelsBusy, setModelsBusy] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,6 +32,27 @@ export function PopupApp() {
     void (async () => {
       const settings = await getSettings();
       setUiLanguage(settings.uiLanguage);
+      setTranslateModel(settings.translateModel);
+      setChatModel(settings.chatModel);
+
+      setModelsBusy(true);
+      try {
+        const conn = (await chrome.runtime.sendMessage({
+          type: 'CONNECTION_TEST',
+        })) as ExtensionResponse;
+        if (conn.ok && 'connection' in conn && conn.connection.ok) {
+          setModels(conn.connection.models);
+        } else if (!settings.translateModel && !settings.chatModel) {
+          setError(t(settings.uiLanguage, 'modelsLoadError'));
+        }
+      } catch {
+        if (!settings.translateModel && !settings.chatModel) {
+          setError(t(settings.uiLanguage, 'modelsLoadError'));
+        }
+      } finally {
+        setModelsBusy(false);
+      }
+
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       if (!tab?.id) {
         setError(t(settings.uiLanguage, 'noActiveTab'));
@@ -55,11 +81,32 @@ export function PopupApp() {
   const lang = uiLanguage;
   const dir = isRtlLanguage(lang) ? 'rtl' : 'ltr';
 
+  const persistModel = async (
+    key: 'translateModel' | 'chatModel',
+    value: string,
+  ) => {
+    if (key === 'translateModel') setTranslateModel(value);
+    else setChatModel(value);
+    setError(null);
+    try {
+      const next: Settings = await saveSettings({ [key]: value });
+      setTranslateModel(next.translateModel);
+      setChatModel(next.chatModel);
+      setStatus(t(lang, 'modelSaved'));
+    } catch {
+      setError(t(lang, 'modelsLoadError'));
+    }
+  };
+
   const sendToTab = async (
     type: 'TRANSLATE_PAGE' | 'RESTORE_PAGE',
     force = false,
   ) => {
     if (tabId === null) return;
+    if (type === 'TRANSLATE_PAGE' && !translateModel.trim()) {
+      setError(t(lang, 'selectModel'));
+      return;
+    }
     setBusy(true);
     setError(null);
     setStatus(null);
@@ -138,6 +185,8 @@ export function PopupApp() {
     }
   };
 
+  const noTranslateModel = !translateModel.trim();
+
   return (
     <div
       dir={dir}
@@ -156,11 +205,44 @@ export function PopupApp() {
         <h1 className="m-0 text-base font-semibold">{t(lang, 'popupTitle')}</h1>
       </header>
 
+      <section
+        className="mb-3 flex flex-col gap-2 rounded-md border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)]/70 p-2.5"
+        aria-label={t(lang, 'popupModels')}
+      >
+        <p className="m-0 text-[11px] font-semibold text-[var(--ll-muted)]">
+          {t(lang, 'popupModels')}
+        </p>
+        <ModelSelect
+          id="popup-translate-model"
+          label={t(lang, 'translateModel')}
+          value={translateModel}
+          models={models}
+          placeholder={
+            modelsBusy ? t(lang, 'loading') : t(lang, 'selectModel')
+          }
+          disabled={modelsBusy || busy}
+          compact
+          onChange={(v) => void persistModel('translateModel', v)}
+        />
+        <ModelSelect
+          id="popup-chat-model"
+          label={t(lang, 'chatModel')}
+          value={chatModel}
+          models={models}
+          placeholder={
+            modelsBusy ? t(lang, 'loading') : t(lang, 'selectModel')
+          }
+          disabled={modelsBusy || busy}
+          compact
+          onChange={(v) => void persistModel('chatModel', v)}
+        />
+      </section>
+
       <div className="flex flex-col gap-2" role="group" aria-label={t(lang, 'popupTitle')}>
         <button
           type="button"
           className={buttonPrimaryClassName}
-          disabled={busy || restricted}
+          disabled={busy || restricted || noTranslateModel}
           aria-busy={busy}
           onClick={() => void sendToTab('TRANSLATE_PAGE')}
         >

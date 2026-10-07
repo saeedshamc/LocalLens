@@ -6,6 +6,7 @@ import {
   inputClassName,
 } from '../../components/Field';
 import { ConnectionBanner } from '../../components/ConnectionBanner';
+import { ModelSelect } from '../../components/ModelSelect';
 import { PageShell } from '../../components/PageShell';
 import { t } from '../../lib/i18n';
 import type { ExtensionResponse } from '../../lib/messaging/types';
@@ -377,54 +378,5 @@ export function OptionsApp() {
         <p className="m-0 text-sm text-[var(--ll-muted)]">{t(lang, 'privacyNote')}</p>
       </section>
     </PageShell>
-  );
-}
-
-function ModelSelect({
-  id,
-  label,
-  value,
-  models,
-  placeholder,
-  onChange,
-  allowCustom,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  models: string[];
-  placeholder: string;
-  onChange: (value: string) => void;
-  allowCustom?: boolean;
-}) {
-  const options = [...models];
-  if (value && !options.includes(value)) options.unshift(value);
-
-  return (
-    <Field label={label} htmlFor={id}>
-      {models.length > 0 || value ? (
-        <select
-          id={id}
-          className={inputClassName}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          <option value="">{placeholder}</option>
-          {options.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input
-          id={id}
-          className={inputClassName}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={allowCustom ? 'bge-m3' : placeholder}
-        />
-      )}
-    </Field>
   );
 }

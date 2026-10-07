@@ -47,6 +47,9 @@ export const en = {
   restartHint:
     'After setting OLLAMA_ORIGINS, fully restart Ollama so the change takes effect.',
   popupTitle: 'Page tools',
+  popupModels: 'Models',
+  modelSaved: 'Model saved.',
+  modelsLoadError: 'Could not list models. Check Ollama in Settings.',
   translatePage: 'Translate page',
   restoreOriginal: 'Restore original',
   pickElement: 'Pick element',
