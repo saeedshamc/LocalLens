@@ -38,10 +38,24 @@ export function ConnectionBanner({ result, uiLanguage, busy }: Props) {
       ? 'bg-[var(--ll-warning-soft)] text-[var(--ll-warning)]'
       : 'bg-[var(--ll-danger-soft)] text-[var(--ll-danger)]';
 
+  const kindLabel =
+    result.kind === 'cors'
+      ? t(uiLanguage, 'connectionKindCors')
+      : result.kind === 'offline'
+        ? t(uiLanguage, 'connectionKindOffline')
+        : t(uiLanguage, 'connectionKindHttp');
+
+  const message =
+    result.kind === 'cors'
+      ? t(uiLanguage, 'connectionCors')
+      : result.kind === 'offline'
+        ? t(uiLanguage, 'connectionOffline')
+        : t(uiLanguage, 'connectionHttp', { status: result.status });
+
   return (
     <div className={`rounded-md border border-transparent px-3 py-2 text-sm ${soft}`} role="alert">
-      <p className="m-0 font-medium uppercase tracking-wide opacity-80">{result.kind}</p>
-      <p className="m-0 mt-1">{result.message}</p>
+      <p className="m-0 font-medium tracking-wide opacity-80">{kindLabel}</p>
+      <p className="m-0 mt-1">{message}</p>
     </div>
   );
 }

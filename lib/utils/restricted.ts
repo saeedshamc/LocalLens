@@ -1,3 +1,6 @@
+import { t } from '../i18n';
+import type { UiLanguage } from '../settings/types';
+
 /** Pages where content scripts cannot run or should not translate. */
 export function isRestrictedUrl(url: string | undefined | null): boolean {
   if (!url) return true;
@@ -21,5 +24,9 @@ export function isRestrictedUrl(url: string | undefined | null): boolean {
   }
 }
 
-export const RESTRICTED_PAGE_MESSAGE =
-  'LocalLens cannot run on this page (browser internal pages and the Chrome Web Store are blocked). Open a normal http(s) page instead.';
+export function restrictedPageMessage(lang: UiLanguage = 'en'): string {
+  return t(lang, 'restrictedPage');
+}
+
+/** @deprecated Prefer restrictedPageMessage(lang) for localized UI. */
+export const RESTRICTED_PAGE_MESSAGE = restrictedPageMessage('en');
