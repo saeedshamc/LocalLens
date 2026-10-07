@@ -1,0 +1,8 @@
+.output
+.wxt
+dist
+node_modules
+coverage
+*.zip
+package-lock.json
+CHANGELOG.md

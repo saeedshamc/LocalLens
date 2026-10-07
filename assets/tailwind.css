@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+
+:root {
+  --ll-bg: #f7f4ef;
+  --ll-bg-elevated: #ffffff;
+  --ll-ink: #1a1f2b;
+  --ll-muted: #5c6578;
+  --ll-accent: #0f6e56;
+  --ll-accent-soft: #d8efe6;
+  --ll-danger: #b42318;
+  --ll-danger-soft: #fee4e2;
+  --ll-warning: #b54708;
+  --ll-warning-soft: #fef0c7;
+  --ll-border: #d8d3c8;
+  --ll-focus: #0f6e56;
+  --ll-font-sans: 'Segoe UI', 'Tahoma', 'Noto Sans', sans-serif;
+  --ll-font-fa: 'Tahoma', 'Segoe UI', 'Noto Sans Arabic', sans-serif;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--ll-font-sans);
+  color: var(--ll-ink);
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, #d8efe6 0%, transparent 55%),
+    radial-gradient(ellipse 70% 40% at 100% 0%, #efe6d4 0%, transparent 50%),
+    var(--ll-bg);
+}
+
+body[dir='rtl'] {
+  font-family: var(--ll-font-fa);
+}
+
+* {
+  box-sizing: border-box;
+}
