@@ -8,6 +8,14 @@ export const en = {
   testConnection: 'Test connection',
   testing: 'Testing…',
   connectionOk: 'Connected. {count} model(s) available.',
+  connectionCors:
+    'Ollama rejected the request (HTTP 403). Set OLLAMA_ORIGINS to allow this extension, then restart Ollama. See the Help page for the exact command.',
+  connectionOffline:
+    'Cannot reach Ollama. Make sure Ollama is running and the host URL is correct (default: http://localhost:11434).',
+  connectionHttp: 'Ollama returned HTTP {status}.',
+  connectionKindCors: 'CORS',
+  connectionKindOffline: 'Offline',
+  connectionKindHttp: 'HTTP error',
   ollamaHost: 'Ollama host',
   translateModel: 'Translate model',
   chatModel: 'Chat model',
@@ -32,17 +40,44 @@ export const en = {
   sectionPrompts: 'System prompts',
   sectionUi: 'Interface',
   helpInstallTitle: '1. Install Ollama',
+  helpInstallLi1Before: 'Download and install Ollama from',
+  helpInstallLi1After: '.',
+  helpInstallLi2: 'Start Ollama so it listens on port 11434 by default.',
   helpPullTitle: '2. Pull models',
+  helpPullIntro: 'Pull at least one chat/translate model and an embedding model:',
+  helpPullHint:
+    'Any compatible model works; pick what fits your machine in Settings after a successful connection test.',
   helpOriginsTitle: '3. Allow this extension (OLLAMA_ORIGINS)',
+  helpOriginsIntro:
+    'Chrome extensions run on a chrome-extension:// origin. Ollama blocks those requests with HTTP 403 unless OLLAMA_ORIGINS includes this extension.',
+  helpWindowsHint:
+    'On Windows, run setx in a new terminal, then quit Ollama from the tray and start it again (or sign out / reboot) so the new environment variable is picked up.',
   helpFeaturesTitle: 'Features',
+  helpFeature1: 'Whole-page contextual translation with lazy loading for long pages.',
+  helpFeature2:
+    'Inspect-style element picker: translate, explain, summarize, or ask in chat.',
+  helpFeature3: 'Side panel chat grounded on the current page, with streamed answers.',
+  helpFeature4:
+    'Everything stays on your machine via local Ollama — no cloud API keys.',
   helpShortcutsTitle: 'Shortcuts',
+  helpShortcutPicker:
+    'Default picker shortcut: Alt+Shift+L. You can also use the right-click menu: LocalLens → toggle element picker.',
   helpTroubleshootTitle: 'Troubleshooting',
+  helpTs403:
+    'HTTP 403 / CORS: set OLLAMA_ORIGINS as above and restart Ollama.',
+  helpTsOffline:
+    'Ollama not running: start the Ollama app/service and re-test from Settings.',
+  helpTsModel:
+    'Model missing: ollama pull <model> then refresh models with Test connection.',
+  helpTsSlow:
+    'Slow responses: try a smaller model, lower num_ctx, or ensure the GPU/CPU is not overloaded.',
   helpPrivacyTitle: 'Privacy',
   copy: 'Copy',
   copied: 'Copied',
   osWindows: 'Windows',
   osLinux: 'Linux',
   osMacos: 'macOS',
+  osTablist: 'Operating system',
   extensionId: 'Extension ID',
   restartHint:
     'After setting OLLAMA_ORIGINS, fully restart Ollama so the change takes effect.',
@@ -63,6 +98,10 @@ export const en = {
   noActiveTab: 'No active tab.',
   reachPageError:
     'Could not reach the page. Reload the tab, then try again. LocalLens cannot run on restricted browser pages.',
+  unexpectedPageResponse: 'Unexpected response from the page.',
+  pickerFailed: 'Picker failed.',
+  restrictedPage:
+    'LocalLens cannot run on this page (browser internal pages and the Chrome Web Store are blocked). Open a normal http(s) page instead.',
   chatTitle: 'Chat with page',
   chatIntro:
     'Ask a question about this page. Long pages retrieve the most relevant passages with embeddings.',
@@ -100,6 +139,40 @@ export const en = {
   translationMode: 'Translation mode',
   modeReplace: 'Replace page text',
   modeOverlay: 'Overlay only (keep original)',
+  actionTranslate: 'Translate',
+  actionExplain: 'Explain',
+  actionSummarize: 'Summarize',
+  actionAsk: 'Ask in chat',
+  contextMenuPicker: 'LocalLens: Toggle element picker',
+  errorNoPageText: 'No readable text found on this page.',
+  errorApplyNotFound:
+    'Could not find the selected text on the page to apply the translation.',
+  errorTranslateBusy: 'Translation already in progress.',
+  errorNoTranslateModel:
+    'No translate model selected. Open Settings and choose a model.',
+  errorUnexpectedTranslate: 'Unexpected translation error.',
+  errorUnknownRequest: 'Unknown content request.',
+  errorSettingsLoad: 'Failed to load settings.',
+  errorExtractPageText: 'Failed to extract page text.',
+  errorNoChatModel: 'No chat model selected. Open Settings and choose a model.',
+  errorApplyReload:
+    'Could not apply translation on the page. Reload the tab and try again.',
+  errorGenerationStopped: 'Generation stopped.',
+  errorElementAction: 'Element action failed.',
+  errorTranslationFailed: 'Translation failed.',
+  errorUnexpectedBackground: 'Unexpected background error.',
+  errorChatFailed: 'Chat failed.',
+  errorUnknownExtensionRequest: 'Unknown request.',
+  langUiEn: 'English',
+  langUiFa: 'فارسی',
+  targetLangFa: 'Persian (fa)',
+  targetLangEn: 'English (en)',
+  targetLangAr: 'Arabic (ar)',
+  targetLangDe: 'German (de)',
+  targetLangEs: 'Spanish (es)',
+  targetLangFr: 'French (fr)',
+  targetLangTr: 'Turkish (tr)',
+  targetLangZh: 'Chinese (zh)',
 } as const;
 
 export type MessageKey = keyof typeof en;

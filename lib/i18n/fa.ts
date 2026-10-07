@@ -10,6 +10,14 @@ export const fa: Record<MessageKey, string> = {
   testConnection: 'آزمایش اتصال',
   testing: 'در حال آزمایش…',
   connectionOk: 'متصل شد. {count} مدل در دسترس است.',
+  connectionCors:
+    'Ollama درخواست را رد کرد (HTTP 403). متغیر OLLAMA_ORIGINS را طوری تنظیم کنید که این افزونه را اجازه دهد، سپس Ollama را کامل راه‌اندازی مجدد کنید. دستور دقیق در صفحهٔ راهنما است.',
+  connectionOffline:
+    'به Ollama دسترسی نیست. مطمئن شوید Ollama در حال اجراست و آدرس میزبان درست است (پیش‌فرض: http://localhost:11434).',
+  connectionHttp: 'Ollama پاسخ HTTP {status} برگرداند.',
+  connectionKindCors: 'CORS',
+  connectionKindOffline: 'آفلاین',
+  connectionKindHttp: 'خطای HTTP',
   ollamaHost: 'آدرس Ollama',
   translateModel: 'مدل ترجمه',
   chatModel: 'مدل گفتگو',
@@ -34,17 +42,44 @@ export const fa: Record<MessageKey, string> = {
   sectionPrompts: 'پرامپت‌های سیستم',
   sectionUi: 'رابط کاربری',
   helpInstallTitle: '۱. نصب Ollama',
+  helpInstallLi1Before: 'Ollama را از',
+  helpInstallLi1After: ' دانلود و نصب کنید.',
+  helpInstallLi2: 'Ollama را طوری اجرا کنید که به‌طور پیش‌فرض روی پورت 11434 گوش دهد.',
   helpPullTitle: '۲. دریافت مدل‌ها',
+  helpPullIntro: 'حداقل یک مدل گفتگو/ترجمه و یک مدل embedding دریافت کنید:',
+  helpPullHint:
+    'هر مدل سازگاری کار می‌کند؛ پس از موفقیت Test connection در تنظیمات مدلی مناسب دستگاهتان انتخاب کنید.',
   helpOriginsTitle: '۳. اجازه به این افزونه (OLLAMA_ORIGINS)',
+  helpOriginsIntro:
+    'افزونه‌های کروم از مبدأ chrome-extension:// اجرا می‌شوند. Ollama این درخواست‌ها را با HTTP 403 رد می‌کند مگر اینکه OLLAMA_ORIGINS شامل این افزونه باشد.',
+  helpWindowsHint:
+    'در ویندوز دستور setx را در یک ترمینال جدید اجرا کنید، سپس Ollama را از tray کامل ببندید و دوباره باز کنید (یا Sign out / Restart) تا متغیر محیطی اعمال شود.',
   helpFeaturesTitle: 'قابلیت‌ها',
+  helpFeature1: 'ترجمهٔ معنایی کل صفحه با بارگذاری تنبل برای صفحات بلند.',
+  helpFeature2:
+    'انتخابگر شبیه Inspect: ترجمه، توضیح، خلاصه، یا پرسش در گفتگو.',
+  helpFeature3: 'چت پانل کناری بر اساس محتوای صفحه با پاسخ‌های استریم‌شده.',
+  helpFeature4:
+    'همه‌چیز روی دستگاه شما از طریق Ollama محلی می‌ماند — بدون کلید API ابری.',
   helpShortcutsTitle: 'میانبرها',
+  helpShortcutPicker:
+    'میانبر پیش‌فرض انتخابگر: Alt+Shift+L. همچنین از منوی راست‌کلیک: LocalLens → روشن/خاموش کردن انتخابگر.',
   helpTroubleshootTitle: 'عیب‌یابی',
+  helpTs403:
+    'HTTP 403 / CORS: OLLAMA_ORIGINS را طبق بالا تنظیم کنید و Ollama را راه‌اندازی مجدد کنید.',
+  helpTsOffline:
+    'Ollama اجرا نیست: برنامه/سرویس Ollama را روشن کنید و دوباره از تنظیمات اتصال را بیازمایید.',
+  helpTsModel:
+    'مدل موجود نیست: ollama pull <model> سپس با Test connection لیست را تازه کنید.',
+  helpTsSlow:
+    'پاسخ کند: مدل کوچک‌تر، num_ctx کمتر، یا بار کمتر روی GPU/CPU را امتحان کنید.',
   helpPrivacyTitle: 'حریم خصوصی',
   copy: 'کپی',
   copied: 'کپی شد',
   osWindows: 'ویندوز',
   osLinux: 'لینوکس',
   osMacos: 'macOS',
+  osTablist: 'سیستم‌عامل',
   extensionId: 'شناسه افزونه',
   restartHint:
     'پس از تنظیم OLLAMA_ORIGINS، Ollama را کامل راه‌اندازی مجدد کنید تا تغییر اعمال شود.',
@@ -65,6 +100,10 @@ export const fa: Record<MessageKey, string> = {
   noActiveTab: 'زبانهٔ فعالی نیست.',
   reachPageError:
     'دسترسی به صفحه ممکن نیست. زبانه را دوباره بارگذاری کنید. روی صفحات داخلی مرورگر کار نمی‌کند.',
+  unexpectedPageResponse: 'پاسخ غیرمنتظره از صفحه.',
+  pickerFailed: 'انتخابگر شکست خورد.',
+  restrictedPage:
+    'LocalLens روی این صفحه اجرا نمی‌شود (صفحات داخلی مرورگر و Chrome Web Store مسدودند). یک صفحهٔ عادی http(s) باز کنید.',
   chatTitle: 'گفتگو با صفحه',
   chatIntro:
     'دربارهٔ این صفحه بپرسید. صفحات بلند با embeddings مرتبط‌ترین بخش‌ها را برمی‌گردانند.',
@@ -102,4 +141,38 @@ export const fa: Record<MessageKey, string> = {
   translationMode: 'حالت ترجمه',
   modeReplace: 'جایگزینی متن صفحه',
   modeOverlay: 'فقط پوشش (حفظ متن اصلی)',
+  actionTranslate: 'ترجمه',
+  actionExplain: 'توضیح',
+  actionSummarize: 'خلاصه',
+  actionAsk: 'پرسش در گفتگو',
+  contextMenuPicker: 'LocalLens: روشن/خاموش کردن انتخابگر',
+  errorNoPageText: 'متن خوانایی در این صفحه پیدا نشد.',
+  errorApplyNotFound: 'متن انتخاب‌شده برای اعمال ترجمه روی صفحه پیدا نشد.',
+  errorTranslateBusy: 'ترجمه از قبل در حال انجام است.',
+  errorNoTranslateModel:
+    'مدل ترجمه انتخاب نشده. تنظیمات را باز کنید و یک مدل برگزینید.',
+  errorUnexpectedTranslate: 'خطای غیرمنتظره در ترجمه.',
+  errorUnknownRequest: 'درخواست ناشناخته به صفحه.',
+  errorSettingsLoad: 'بارگذاری تنظیمات ناموفق بود.',
+  errorExtractPageText: 'استخراج متن صفحه ناموفق بود.',
+  errorNoChatModel:
+    'مدل گفتگو انتخاب نشده. تنظیمات را باز کنید و یک مدل برگزینید.',
+  errorApplyReload:
+    'اعمال ترجمه روی صفحه ممکن نشد. زبانه را دوباره بارگذاری کنید و دوباره تلاش کنید.',
+  errorGenerationStopped: 'تولید پاسخ متوقف شد.',
+  errorElementAction: 'عملیات روی عنصر ناموفق بود.',
+  errorTranslationFailed: 'ترجمه ناموفق بود.',
+  errorUnexpectedBackground: 'خطای غیرمنتظره در پس‌زمینه.',
+  errorChatFailed: 'گفتگو ناموفق بود.',
+  errorUnknownExtensionRequest: 'درخواست ناشناخته.',
+  langUiEn: 'English',
+  langUiFa: 'فارسی',
+  targetLangFa: 'فارسی (fa)',
+  targetLangEn: 'انگلیسی (en)',
+  targetLangAr: 'عربی (ar)',
+  targetLangDe: 'آلمانی (de)',
+  targetLangEs: 'اسپانیایی (es)',
+  targetLangFr: 'فرانسوی (fr)',
+  targetLangTr: 'ترکی (tr)',
+  targetLangZh: 'چینی (zh)',
 };
