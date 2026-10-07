@@ -31,7 +31,8 @@ LocalLens is a browser extension that helps you translate web pages and ask ques
 LocalLens requests only the permissions needed to:
 
 - Store settings and caches (`storage`)
-- Talk to the active tab and inject the content script on normal `http(s)` pages (`tabs` / `activeTab` / content scripts)
+- Talk to the active tab and inject the content script on normal `http(s)` pages (`tabs` / `activeTab` / `scripting` / content scripts)
+- Access normal web pages (`http://*/*`, `https://*/*`) so translation can attach after extension reload without requiring a manual tab refresh every time
 - Provide a context menu and side panel (`contextMenus`, `sidePanel`)
 - Speak text with system voices (`tts`)
 - Reach the configured Ollama host on localhost / 127.0.0.1 (host permissions)

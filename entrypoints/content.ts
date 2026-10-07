@@ -13,10 +13,18 @@ import { createTranslatePortClient } from '../lib/translate/port-client';
 import { looksLikeTargetLanguage } from '../lib/utils/detect-lang';
 import { isRtlLanguage } from '../lib/utils/rtl';
 
+const CONTENT_BOOT_FLAG = '__locallensContentBooted';
+
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_idle',
   main() {
+    const boot = globalThis as typeof globalThis & {
+      [CONTENT_BOOT_FLAG]?: boolean;
+    };
+    if (boot[CONTENT_BOOT_FLAG]) return;
+    boot[CONTENT_BOOT_FLAG] = true;
+
     let lazy: LazyTranslateController | null = null;
     let translatePort: ReturnType<typeof createTranslatePortClient> | null = null;
     let translated = false;

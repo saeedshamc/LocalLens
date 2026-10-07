@@ -29,6 +29,7 @@ import {
 import { setPendingElementContext } from '../lib/storage/pending-context';
 import { runElementAction } from '../lib/translate/element-actions';
 import { translateBatch } from '../lib/translate/engine';
+import { ensureContentScript } from '../lib/utils/ensure-content';
 import {
   isRestrictedUrl,
   restrictedPageMessage,
@@ -242,6 +243,17 @@ async function togglePickerOnTab(tabId: number, url?: string): Promise<Extension
       kind: 'restricted',
     };
   }
+  const ready = await ensureContentScript(tabId, url);
+  if (!ready.ok) {
+    return {
+      ok: false,
+      error: t(
+        settings.uiLanguage,
+        ready.kind === 'restricted' ? 'restrictedPage' : 'injectContentError',
+      ),
+      kind: ready.kind === 'restricted' ? 'restricted' : 'error',
+    };
+  }
   try {
     const res = (await chrome.tabs.sendMessage(tabId, {
       type: 'TOGGLE_PICKER',
@@ -250,7 +262,7 @@ async function togglePickerOnTab(tabId: number, url?: string): Promise<Extension
   } catch {
     return {
       ok: false,
-      error: t(settings.uiLanguage, 'reachPageError'),
+      error: t(settings.uiLanguage, 'injectContentError'),
     };
   }
 }
@@ -486,6 +498,19 @@ async function handleChatPortMessage(
         type: 'CHAT_ERROR',
         requestId: message.requestId,
         error: restrictedPageMessage(settings.uiLanguage),
+      });
+      return;
+    }
+
+    const ready = await ensureContentScript(message.tabId, tab.url);
+    if (!ready.ok) {
+      postChat(port, {
+        type: 'CHAT_ERROR',
+        requestId: message.requestId,
+        error: t(
+          settings.uiLanguage,
+          ready.kind === 'restricted' ? 'restrictedPage' : 'injectContentError',
+        ),
       });
       return;
     }

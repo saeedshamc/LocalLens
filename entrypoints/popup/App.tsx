@@ -8,6 +8,7 @@ import { t } from '../../lib/i18n';
 import type { ContentResponse, ExtensionResponse } from '../../lib/messaging/types';
 import { getSettings, saveSettings } from '../../lib/settings/storage';
 import type { Settings, UiLanguage } from '../../lib/settings/types';
+import { ensureContentScript } from '../../lib/utils/ensure-content';
 import {
   isRestrictedUrl,
   restrictedPageMessage,
@@ -26,6 +27,7 @@ export function PopupApp() {
   const [translated, setTranslated] = useState(false);
   const [pickerActive, setPickerActive] = useState(false);
   const [tabId, setTabId] = useState<number | null>(null);
+  const [tabUrl, setTabUrl] = useState<string | undefined>(undefined);
   const [restricted, setRestricted] = useState(false);
 
   useEffect(() => {
@@ -59,11 +61,14 @@ export function PopupApp() {
         return;
       }
       setTabId(tab.id);
+      setTabUrl(tab.url);
       if (isRestrictedUrl(tab.url)) {
         setRestricted(true);
         setError(restrictedPageMessage(settings.uiLanguage));
         return;
       }
+      const ready = await ensureContentScript(tab.id, tab.url);
+      if (!ready.ok) return;
       try {
         const res = (await chrome.tabs.sendMessage(tab.id, {
           type: 'GET_STATUS',
@@ -73,7 +78,7 @@ export function PopupApp() {
           setPickerActive(Boolean(res.pickerActive));
         }
       } catch {
-        // Content script may not be injected yet on this navigation.
+        // Content script may still be starting.
       }
     })();
   }, []);
@@ -111,6 +116,16 @@ export function PopupApp() {
     setError(null);
     setStatus(null);
     try {
+      const ready = await ensureContentScript(tabId, tabUrl);
+      if (!ready.ok) {
+        setError(
+          t(
+            lang,
+            ready.kind === 'restricted' ? 'restrictedPage' : 'injectContentError',
+          ),
+        );
+        return;
+      }
       const res = (await chrome.tabs.sendMessage(tabId, {
         type,
         ...(type === 'TRANSLATE_PAGE' ? { force } : {}),
@@ -143,7 +158,7 @@ export function PopupApp() {
         setStatus(t(lang, 'restoreOriginal'));
       }
     } catch {
-      setError(t(lang, 'reachPageError'));
+      setError(t(lang, 'injectContentError'));
     } finally {
       setBusy(false);
     }

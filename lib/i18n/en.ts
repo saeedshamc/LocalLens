@@ -100,6 +100,8 @@ export const en = {
   noActiveTab: 'No active tab.',
   reachPageError:
     'Could not reach the page. Reload the tab, then try again. LocalLens cannot run on restricted browser pages.',
+  injectContentError:
+    'LocalLens could not attach to this tab. Reload the page once, then try again. (PDF viewers and some special pages are not supported.)',
   unexpectedPageResponse: 'Unexpected response from the page.',
   pickerFailed: 'Picker failed.',
   restrictedPage:

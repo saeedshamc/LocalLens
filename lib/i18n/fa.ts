@@ -102,6 +102,8 @@ export const fa: Record<MessageKey, string> = {
   noActiveTab: 'زبانهٔ فعالی نیست.',
   reachPageError:
     'دسترسی به صفحه ممکن نیست. زبانه را دوباره بارگذاری کنید. روی صفحات داخلی مرورگر کار نمی‌کند.',
+  injectContentError:
+    'LocalLens نتوانست به این زبانه وصل شود. یک‌بار صفحه را Reload کنید و دوباره امتحان کنید. (PDF و بعضی صفحات خاص پشتیبانی نمی‌شوند.)',
   unexpectedPageResponse: 'پاسخ غیرمنتظره از صفحه.',
   pickerFailed: 'انتخابگر شکست خورد.',
   restrictedPage:

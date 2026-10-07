@@ -18,6 +18,7 @@ export default defineConfig({
       'storage',
       'tabs',
       'activeTab',
+      'scripting',
       'contextMenus',
       'tts',
       ...(browser === 'firefox' ? [] : (['sidePanel'] as const)),
@@ -25,6 +26,8 @@ export default defineConfig({
     host_permissions: [
       'http://localhost:11434/*',
       'http://127.0.0.1:11434/*',
+      'http://*/*',
+      'https://*/*',
     ],
     icons: {
       16: 'icon/16.png',
