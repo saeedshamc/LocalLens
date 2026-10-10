@@ -297,6 +297,7 @@ export function PopupApp() {
         >
           {t(lang, 'openSidePanel')}
         </button>
+        <p className="m-0 text-[11px] text-[var(--ll-muted)]">{t(lang, 'openChatHint')}</p>
         <a
           className={buttonSecondaryClassName}
           href={chrome.runtime.getURL('/options.html')}

@@ -20,13 +20,14 @@ import {
   type ChatHistoryMessage,
 } from '../../lib/storage/chat-history';
 import {
-  ELEMENT_RESULT_KEY,
   getElementActionResult,
+  isElementResultStorageKey,
   type ElementActionResult,
 } from '../../lib/storage/element-result';
 import {
   clearPendingElementContext,
   getPendingElementContext,
+  isPendingContextStorageKey,
 } from '../../lib/storage/pending-context';
 import { isRtlLanguage } from '../../lib/utils/rtl';
 import { toSpeechLocale } from '../../lib/voice/lang';
@@ -114,10 +115,10 @@ export function SidePanelApp() {
         );
       }
 
-      const pending = await getPendingElementContext();
+      const pending = await getPendingElementContext(tab.id);
       if (!alive) return;
       if (pending?.text) setElementContext(pending.text);
-      setElementResult(await getElementActionResult());
+      setElementResult(await getElementActionResult(tab.id));
     })();
 
     const onChange = (
@@ -125,8 +126,15 @@ export function SidePanelApp() {
       area: string,
     ) => {
       if (area !== 'session') return;
-      if (ELEMENT_RESULT_KEY in changes) {
-        void getElementActionResult().then(setElementResult);
+      const id = persistRef.current?.tabId;
+      if (id == null) return;
+      if (Object.keys(changes).some((key) => isElementResultStorageKey(key, id))) {
+        void getElementActionResult(id).then(setElementResult);
+      }
+      if (Object.keys(changes).some((key) => isPendingContextStorageKey(key, id))) {
+        void getPendingElementContext(id).then((pending) => {
+          setElementContext(pending?.text ?? null);
+        });
       }
     };
     chrome.storage.onChanged.addListener(onChange);
@@ -325,14 +333,15 @@ export function SidePanelApp() {
 
   const refreshContext = async () => {
     setError(null);
-    const pending = await getPendingElementContext();
-    setElementContext(pending?.text ?? null);
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab?.id) {
       setTabId(tab.id);
       const url = tab.url ?? '';
       setPageUrl(url);
       persistRef.current = { tabId: tab.id, url };
+      const pending = await getPendingElementContext(tab.id);
+      setElementContext(pending?.text ?? null);
+      setElementResult(await getElementActionResult(tab.id));
       const thread = await getChatThread(tab.id, url);
       setMessages(
         (thread?.messages ?? []).map((m) => ({
@@ -374,6 +383,9 @@ export function SidePanelApp() {
             {pageUrl ? t(uiLanguage, 'chatHistoryHint') : t(uiLanguage, 'chatIntro')}
           </p>
         )}
+        <p className="m-0 mt-1 text-[11px] text-[var(--ll-muted)]">
+          {t(uiLanguage, 'openChatHint')}
+        </p>
       </header>
 
       {elementContext ? (
@@ -384,7 +396,10 @@ export function SidePanelApp() {
               type="button"
               className={buttonSecondaryClassName}
               onClick={() => {
-                void clearPendingElementContext().then(() => setElementContext(null));
+                if (tabId == null) return;
+                void clearPendingElementContext(tabId).then(() =>
+                  setElementContext(null),
+                );
               }}
             >
               {t(uiLanguage, 'clear')}
@@ -463,8 +478,9 @@ export function SidePanelApp() {
               className={buttonSecondaryClassName}
               onClick={() => {
                 stopSpeak();
+                if (tabId == null) return;
                 void chrome.runtime
-                  .sendMessage({ type: 'DISCARD_ELEMENT_RESULT' })
+                  .sendMessage({ type: 'DISCARD_ELEMENT_RESULT', tabId })
                   .then(() => {
                     setElementResult(null);
                     setPreviewStatus(null);
