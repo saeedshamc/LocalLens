@@ -147,6 +147,8 @@ export function PopupApp() {
             await sendToTab('TRANSLATE_PAGE', true);
             return;
           }
+          // User cancelled — not an error.
+          return;
         }
         setError(res.error);
         return;
