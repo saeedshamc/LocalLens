@@ -27,8 +27,9 @@ import {
   setElementActionResult,
 } from '../lib/storage/element-result';
 import { setPendingElementContext } from '../lib/storage/pending-context';
+import { resolveChatModel } from '../lib/settings/models';
 import { runElementAction } from '../lib/translate/element-actions';
-import { translateBatch } from '../lib/translate/engine';
+import { NO_TRANSLATE_MODEL, translateBatch } from '../lib/translate/engine';
 import { ensureContentScript } from '../lib/utils/ensure-content';
 import {
   isRestrictedUrl,
@@ -237,12 +238,17 @@ async function handleContentEvent(
     void openSidePanelBestEffort(tabId);
   } catch (error) {
     const latest = await getSettings();
+    const raw =
+      error instanceof Error
+        ? error.message
+        : t(latest.uiLanguage, 'errorElementAction');
+    const localized =
+      raw === NO_TRANSLATE_MODEL
+        ? t(latest.uiLanguage, 'errorNoTranslateModel')
+        : raw;
     await setElementActionResult({
       action: message.action,
-      error:
-        error instanceof Error
-          ? error.message
-          : t(latest.uiLanguage, 'errorElementAction'),
+      error: localized,
       text: message.text,
       url: message.url,
       tabId,
@@ -311,7 +317,14 @@ async function handleMessage(
         };
       } catch (error) {
         if (error instanceof OllamaClientError) {
-          return { ok: false, error: error.message, kind: error.kind };
+          return {
+            ok: false,
+            error:
+              error.message === NO_TRANSLATE_MODEL
+                ? t(settings.uiLanguage, 'errorNoTranslateModel')
+                : error.message,
+            kind: error.kind,
+          };
         }
         return {
           ok: false,
@@ -329,7 +342,14 @@ async function handleMessage(
         return { ok: true, result };
       } catch (error) {
         if (error instanceof OllamaClientError) {
-          return { ok: false, error: error.message, kind: error.kind };
+          return {
+            ok: false,
+            error:
+              error.message === NO_TRANSLATE_MODEL
+                ? t(settings.uiLanguage, 'errorNoTranslateModel')
+                : error.message,
+            kind: error.kind,
+          };
         }
         return {
           ok: false,
@@ -478,15 +498,18 @@ async function handleTranslatePortMessage(
       fromModel: result.fromModel,
     });
   } catch (error) {
-    postTranslate(port, {
-      type: 'TRANSLATE_BATCH_ERROR',
-      requestId: message.requestId,
-      error:
-        error instanceof OllamaClientError
+    const messageText =
+      error instanceof OllamaClientError && error.message === NO_TRANSLATE_MODEL
+        ? t(settings.uiLanguage, 'errorNoTranslateModel')
+        : error instanceof OllamaClientError
           ? error.message
           : error instanceof Error
             ? error.message
-            : t(settings.uiLanguage, 'errorTranslationFailed'),
+            : t(settings.uiLanguage, 'errorTranslationFailed');
+    postTranslate(port, {
+      type: 'TRANSLATE_BATCH_ERROR',
+      requestId: message.requestId,
+      error: messageText,
     });
   }
 }
@@ -550,7 +573,7 @@ async function handleChatPortMessage(
     }
 
     const page = extracted.pageText;
-    const model = settings.chatModel || settings.translateModel;
+    const model = resolveChatModel(settings);
     if (!model) {
       postChat(port, {
         type: 'CHAT_ERROR',

@@ -1,9 +1,10 @@
 import { ollamaChat, OllamaClientError } from '../ollama/client';
+import { resolveTranslateModel } from '../settings/models';
+import type { Settings } from '../settings/types';
 import {
   getCachedTranslation,
   setCachedTranslation,
 } from '../storage/translation-cache';
-import type { Settings } from '../settings/types';
 import { batchTexts } from './batch';
 import { parseTranslations } from './parse';
 import { protectPlaceholders } from './placeholders';
@@ -11,6 +12,8 @@ import {
   TRANSLATION_FORMAT_SCHEMA,
   buildTranslateMessages,
 } from './prompts';
+
+const NO_TRANSLATE_MODEL = 'NO_TRANSLATE_MODEL';
 
 export interface TranslateBatchRequest {
   texts: string[];
@@ -29,11 +32,9 @@ async function translateItemsOnce(
   settings: Settings,
   signal?: AbortSignal,
 ): Promise<string[]> {
-  if (!settings.translateModel) {
-    throw new OllamaClientError(
-      'http',
-      'No translate model selected. Open Settings and choose a model.',
-    );
+  const model = resolveTranslateModel(settings);
+  if (!model) {
+    throw new OllamaClientError('http', NO_TRANSLATE_MODEL);
   }
 
   const protectedItems = texts.map((text) => protectPlaceholders(text));
@@ -45,7 +46,7 @@ async function translateItemsOnce(
 
   const response = await ollamaChat({
     host: settings.ollamaHost,
-    model: settings.translateModel,
+    model,
     messages,
     stream: false,
     format: TRANSLATION_FORMAT_SCHEMA,
@@ -87,6 +88,11 @@ export async function translateBatch(
   request: TranslateBatchRequest,
 ): Promise<TranslateBatchResult> {
   const { texts, settings, signal } = request;
+  const model = resolveTranslateModel(settings);
+  if (!model) {
+    throw new OllamaClientError('http', NO_TRANSLATE_MODEL);
+  }
+
   const translations = new Array<string>(texts.length);
   let fromCache = 0;
   let fromModel = 0;
@@ -101,7 +107,7 @@ export async function translateBatch(
     }
     const cached = await getCachedTranslation(
       text,
-      settings.translateModel,
+      model,
       settings.targetLanguage,
     );
     if (cached !== null) {
@@ -145,7 +151,7 @@ export async function translateBatch(
         await setCachedTranslation(
           original,
           translated,
-          settings.translateModel,
+          model,
           settings.targetLanguage,
         );
       }
@@ -161,7 +167,7 @@ export async function translateBatch(
       await setCachedTranslation(
         original,
         translated,
-        settings.translateModel,
+        model,
         settings.targetLanguage,
       );
     }
@@ -173,3 +179,5 @@ export async function translateBatch(
     fromModel,
   };
 }
+
+export { NO_TRANSLATE_MODEL };

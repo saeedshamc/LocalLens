@@ -6,6 +6,7 @@ import type {
   ExtensionResponse,
 } from '../lib/messaging/types';
 import { createPickerController } from '../lib/picker/controller';
+import { resolveTranslateModel } from '../lib/settings/models';
 import type { Settings } from '../lib/settings/types';
 import { applyElementTranslation } from '../lib/translate/apply-element';
 import { createLazyTranslator, type LazyTranslateController } from '../lib/translate/lazy';
@@ -185,7 +186,7 @@ export default defineContentScript({
           translated = false;
 
           const settings = await ensureSettings();
-          if (!settings.translateModel) {
+          if (!resolveTranslateModel(settings)) {
             return {
               ok: false,
               error: t(uiLang(), 'errorNoTranslateModel'),
