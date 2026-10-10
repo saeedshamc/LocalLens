@@ -6,6 +6,7 @@ import type {
   ExtensionResponse,
 } from '../lib/messaging/types';
 import { createPickerController } from '../lib/picker/controller';
+import { showPageToast } from '../lib/picker/toast';
 import { resolveTranslateModel } from '../lib/settings/models';
 import type { Settings } from '../lib/settings/types';
 import { applyElementTranslation } from '../lib/translate/apply-element';
@@ -131,6 +132,11 @@ export default defineContentScript({
             url: location.href,
           },
         };
+      }
+
+      if (message.type === 'SHOW_TOAST') {
+        showPageToast(message.message, message.tone ?? 'info');
+        return { ok: true, kind: 'status', translated };
       }
 
       if (message.type === 'APPLY_ELEMENT_TRANSLATION') {

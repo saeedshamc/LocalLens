@@ -204,6 +204,22 @@ function notifyElementResultReady(): void {
   void chrome.action.setBadgeText({ text: '•' });
 }
 
+async function toastOnTab(
+  tabId: number,
+  message: string,
+  tone: 'info' | 'error' = 'info',
+): Promise<void> {
+  try {
+    await chrome.tabs.sendMessage(tabId, {
+      type: 'SHOW_TOAST',
+      message,
+      tone,
+    });
+  } catch {
+    // Page may not have the content script yet.
+  }
+}
+
 async function handleContentEvent(
   message: ContentEvent,
   tab: chrome.tabs.Tab | undefined,
@@ -212,9 +228,8 @@ async function handleContentEvent(
   if (!tab?.id) return;
   const tabId = tab.id;
 
-  // Open the panel before any long await — sidePanel.open needs a fresh user gesture.
-  void openSidePanelBestEffort(tabId);
-
+  // Only "Ask in chat" opens the side panel — other actions stay on the page
+  // so chat does not cover every tab; each tab keeps its own stored result.
   if (message.action === 'ask') {
     await setPendingElementContext({
       text: message.text,
@@ -223,12 +238,12 @@ async function handleContentEvent(
       createdAt: Date.now(),
     });
     notifyElementResultReady();
+    void openSidePanelBestEffort(tabId);
     return;
   }
 
   const settings = await getSettings();
 
-  // Show a pending preview immediately so the side panel is not empty.
   await setElementActionResult({
     action: message.action,
     text: message.text,
@@ -252,7 +267,7 @@ async function handleContentEvent(
         uiLanguage: settings.uiLanguage,
       });
       void speakText({ text: result, lang, rate: settings.ttsRate }).catch(() => {
-        // TTS failures should not block the panel preview.
+        // TTS failures should not block storing the preview.
       });
     }
     await setElementActionResult({
@@ -264,7 +279,7 @@ async function handleContentEvent(
       createdAt: Date.now(),
       spoken: shouldSpeak,
     });
-    void openSidePanelBestEffort(tabId);
+    await toastOnTab(tabId, t(settings.uiLanguage, 'resultReadyToast'), 'info');
   } catch (error) {
     const latest = await getSettings();
     const raw =
@@ -283,7 +298,7 @@ async function handleContentEvent(
       tabId,
       createdAt: Date.now(),
     });
-    void openSidePanelBestEffort(tabId);
+    await toastOnTab(tabId, t(latest.uiLanguage, 'resultErrorToast'), 'error');
   }
 }
 
@@ -437,7 +452,8 @@ async function handleMessage(
         if (!res.ok) {
           return { ok: false, error: res.error };
         }
-        await clearElementActionResult();
+        await clearElementActionResult(message.tabId);
+        void chrome.action.setBadgeText({ text: '' });
         return { ok: true, applied: true };
       } catch {
         const settings = await getSettings();
@@ -448,7 +464,7 @@ async function handleMessage(
       }
     }
     case 'DISCARD_ELEMENT_RESULT': {
-      await clearElementActionResult();
+      await clearElementActionResult(message.tabId);
       void chrome.action.setBadgeText({ text: '' });
       return { ok: true, cleared: true };
     }
