@@ -47,12 +47,13 @@ export default defineBackground(() => {
     if (details.reason === 'install') {
       void chrome.tabs.create({ url: chrome.runtime.getURL('/help.html') });
     }
-    ensureContextMenu();
+    // Title may need the current UI language after install/update.
+    queueEnsureContextMenu();
   });
 
-  ensureContextMenu();
+  queueEnsureContextMenu();
   onSettingsChanged(() => {
-    ensureContextMenu();
+    queueEnsureContextMenu();
   });
 
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {
@@ -144,15 +145,43 @@ function updateTranslateBadge(done: number, pending: number): void {
   void chrome.action.setBadgeText({ text: `${pct}` });
 }
 
-function ensureContextMenu(): void {
-  chrome.contextMenus.removeAll(() => {
-    void getSettings().then((settings) => {
-      chrome.contextMenus.create({
+/** Serialize menu rebuilds — overlapping removeAll/create races cause duplicate-id errors. */
+let contextMenuQueue: Promise<void> = Promise.resolve();
+
+function clearChromeLastError(): void {
+  void chrome.runtime.lastError;
+}
+
+function queueEnsureContextMenu(): void {
+  contextMenuQueue = contextMenuQueue
+    .then(() => rebuildContextMenu())
+    .catch(() => {
+      // Keep the queue alive if a rebuild fails.
+    });
+}
+
+async function rebuildContextMenu(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    chrome.contextMenus.removeAll(() => {
+      clearChromeLastError();
+      resolve();
+    });
+  });
+
+  const settings = await getSettings();
+  await new Promise<void>((resolve) => {
+    chrome.contextMenus.create(
+      {
         id: CONTEXT_MENU_PICKER,
         title: t(settings.uiLanguage, 'contextMenuPicker'),
         contexts: ['page', 'selection', 'editable'],
-      });
-    });
+      },
+      () => {
+        // If a rare race still hits, Chrome sets lastError — clear it so it is not logged.
+        clearChromeLastError();
+        resolve();
+      },
+    );
   });
 }
 
