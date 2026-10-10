@@ -225,12 +225,42 @@ export default defineContentScript({
                 pending,
               });
             },
+            onError: (error) => {
+              void chrome.runtime.sendMessage({
+                type: 'TRANSLATE_PROGRESS',
+                done: lazy?.translatedCount ?? 0,
+                pending: 0,
+              });
+              showPageToast(
+                error.message || t(uiLang(), 'errorTranslationFailed'),
+                'error',
+              );
+            },
           });
           lazy.start();
           translated = true;
 
-          // Give the observer a tick to queue first visible blocks.
-          await new Promise((r) => setTimeout(r, 50));
+          // Wait so visible blocks enqueue and the first batch can start.
+          await new Promise((r) => setTimeout(r, 250));
+
+          void chrome.runtime.sendMessage({
+            type: 'TRANSLATE_PROGRESS',
+            done: lazy.translatedCount,
+            pending: lazy.pendingCount,
+          });
+
+          if (lazy.pendingCount === 0 && lazy.translatedCount === 0) {
+            lazy.stop();
+            lazy = null;
+            translatePort?.disconnect();
+            translatePort = null;
+            translated = false;
+            return {
+              ok: false,
+              error: t(uiLang(), 'errorNoPageText'),
+              kind: 'empty',
+            };
+          }
 
           return {
             ok: true,
