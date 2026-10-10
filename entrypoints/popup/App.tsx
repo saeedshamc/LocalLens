@@ -94,7 +94,16 @@ export function PopupApp() {
     else setChatModel(value);
     setError(null);
     try {
-      const next: Settings = await saveSettings({ [key]: value });
+      const current = await getSettings();
+      const patch: Partial<Settings> = { [key]: value };
+      // If the sibling slot is empty, fill it so Translate / Chat both work.
+      if (key === 'translateModel' && !current.chatModel.trim() && value.trim()) {
+        patch.chatModel = value;
+      }
+      if (key === 'chatModel' && !current.translateModel.trim() && value.trim()) {
+        patch.translateModel = value;
+      }
+      const next: Settings = await saveSettings(patch);
       setTranslateModel(next.translateModel);
       setChatModel(next.chatModel);
       setStatus(t(lang, 'modelSaved'));
@@ -108,7 +117,7 @@ export function PopupApp() {
     force = false,
   ) => {
     if (tabId === null) return;
-    if (type === 'TRANSLATE_PAGE' && !translateModel.trim()) {
+    if (type === 'TRANSLATE_PAGE' && !translateModel.trim() && !chatModel.trim()) {
       setError(t(lang, 'selectModel'));
       return;
     }
@@ -200,7 +209,7 @@ export function PopupApp() {
     }
   };
 
-  const noTranslateModel = !translateModel.trim();
+  const noTranslateModel = !translateModel.trim() && !chatModel.trim();
 
   return (
     <div

@@ -92,7 +92,14 @@ export function OptionsApp() {
 
   const onSave = async () => {
     setSaving(true);
-    const next = await saveSettings(settings);
+    const patch = { ...settings };
+    if (!patch.translateModel.trim() && patch.chatModel.trim()) {
+      patch.translateModel = patch.chatModel;
+    }
+    if (!patch.chatModel.trim() && patch.translateModel.trim()) {
+      patch.chatModel = patch.translateModel;
+    }
+    const next = await saveSettings(patch);
     setSettings(next);
     setSaveMessage(t(lang, 'saved'));
     setSaving(false);
