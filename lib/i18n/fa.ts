@@ -166,6 +166,10 @@ export const fa: Record<MessageKey, string> = {
   voiceNotSupported: 'تشخیص گفتار در این مرورگر در دسترس نیست.',
   spokeAloud: 'در حال بلندخوانی…',
   ttsDisabled: 'بلندخوانی در تنظیمات خاموش است.',
+  resultReadyToast:
+    'انجام شد. از پاپ‌آپ LocalLens پانل کناری را باز کنید تا نتیجهٔ همین صفحه را ببینید.',
+  resultErrorToast: 'عملیات ناموفق بود. جزئیات در پانل کناری است.',
+  openChatHint: 'چت فقط وقتی باز می‌شود که خودتان بخواهید — هر زبانه تاریخچهٔ خودش را دارد.',
   contextMenuPicker: 'LocalLens: روشن/خاموش کردن انتخابگر',
   errorNoPageText: 'متن خوانایی در این صفحه پیدا نشد.',
   errorApplyNotFound: 'متن انتخاب‌شده برای اعمال ترجمه روی صفحه پیدا نشد.',

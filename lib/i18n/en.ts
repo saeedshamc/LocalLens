@@ -164,6 +164,10 @@ export const en = {
   voiceNotSupported: 'Speech recognition is not available in this browser.',
   spokeAloud: 'Reading aloud…',
   ttsDisabled: 'Read aloud is disabled in Settings.',
+  resultReadyToast:
+    'Done. Open the side panel from the LocalLens popup to see the result for this page.',
+  resultErrorToast: 'Action failed. Open the side panel for details.',
+  openChatHint: 'Chat opens only when you ask — each tab keeps its own history.',
   contextMenuPicker: 'LocalLens: Toggle element picker',
   errorNoPageText: 'No readable text found on this page.',
   errorApplyNotFound:

@@ -30,7 +30,7 @@ export type ExtensionRequest =
       originalText: string;
       translation: string;
     }
-  | { type: 'DISCARD_ELEMENT_RESULT' };
+  | { type: 'DISCARD_ELEMENT_RESULT'; tabId: number };
 
 export type ExtensionResponse =
   | { ok: true; settings: Settings }
@@ -72,7 +72,8 @@ export type ContentRequest =
       type: 'APPLY_ELEMENT_TRANSLATION';
       originalText: string;
       translation: string;
-    };
+    }
+  | { type: 'SHOW_TOAST'; message: string; tone?: 'info' | 'error' };
 
 export type ContentResponse =
   | {
