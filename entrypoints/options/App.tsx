@@ -17,22 +17,12 @@ import {
   DEFAULT_SYSTEM_PROMPT_TRANSLATE,
 } from '../../lib/settings/defaults';
 import { getSettings, saveSettings } from '../../lib/settings/storage';
+import { TARGET_LANGUAGE_OPTIONS } from '../../lib/settings/target-languages';
 import type { Settings, UiLanguage } from '../../lib/settings/types';
 import {
   formatBytes,
   type CacheSizes,
 } from '../../lib/storage/cache-admin';
-
-const TARGET_LANGUAGE_OPTIONS = [
-  { value: 'fa', labelKey: 'targetLangFa' as const },
-  { value: 'en', labelKey: 'targetLangEn' as const },
-  { value: 'ar', labelKey: 'targetLangAr' as const },
-  { value: 'de', labelKey: 'targetLangDe' as const },
-  { value: 'es', labelKey: 'targetLangEs' as const },
-  { value: 'fr', labelKey: 'targetLangFr' as const },
-  { value: 'tr', labelKey: 'targetLangTr' as const },
-  { value: 'zh', labelKey: 'targetLangZh' as const },
-];
 
 export function OptionsApp() {
   const [settings, setSettings] = useState<Settings | null>(null);

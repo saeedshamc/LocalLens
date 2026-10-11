@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import {
+  Field,
   buttonPrimaryClassName,
   buttonSecondaryClassName,
+  inputClassName,
 } from '../../components/Field';
 import { ModelSelect } from '../../components/ModelSelect';
 import { t } from '../../lib/i18n';
 import type { ContentResponse, ExtensionResponse } from '../../lib/messaging/types';
 import { getSettings, saveSettings } from '../../lib/settings/storage';
+import {
+  TARGET_LANGUAGE_OPTIONS,
+  isKnownTargetLanguage,
+} from '../../lib/settings/target-languages';
 import type { Settings, UiLanguage } from '../../lib/settings/types';
 import { ensureContentScript } from '../../lib/utils/ensure-content';
 import {
@@ -19,6 +25,7 @@ export function PopupApp() {
   const [uiLanguage, setUiLanguage] = useState<UiLanguage>('en');
   const [translateModel, setTranslateModel] = useState('');
   const [chatModel, setChatModel] = useState('');
+  const [targetLanguage, setTargetLanguage] = useState('fa');
   const [models, setModels] = useState<string[]>([]);
   const [modelsBusy, setModelsBusy] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
@@ -36,6 +43,7 @@ export function PopupApp() {
       setUiLanguage(settings.uiLanguage);
       setTranslateModel(settings.translateModel);
       setChatModel(settings.chatModel);
+      setTargetLanguage(settings.targetLanguage || 'fa');
 
       setModelsBusy(true);
       try {
@@ -109,6 +117,18 @@ export function PopupApp() {
       setStatus(t(lang, 'modelSaved'));
     } catch {
       setError(t(lang, 'modelsLoadError'));
+    }
+  };
+
+  const persistTargetLanguage = async (value: string) => {
+    setTargetLanguage(value);
+    setError(null);
+    try {
+      const next = await saveSettings({ targetLanguage: value });
+      setTargetLanguage(next.targetLanguage);
+      setStatus(t(lang, 'saved'));
+    } catch {
+      setError(t(lang, 'errorSettingsLoad'));
     }
   };
 
@@ -262,6 +282,34 @@ export function PopupApp() {
           compact
           onChange={(v) => void persistModel('chatModel', v)}
         />
+      </section>
+
+      <section
+        className="mb-3 flex flex-col gap-2 rounded-md border border-[var(--ll-border)] bg-[var(--ll-bg-elevated)]/70 p-2.5"
+        aria-label={t(lang, 'targetLanguage')}
+      >
+        <Field label={t(lang, 'targetLanguage')} htmlFor="popup-target-language">
+          <select
+            id="popup-target-language"
+            className={`${inputClassName} py-1.5 text-xs`}
+            value={
+              isKnownTargetLanguage(targetLanguage)
+                ? targetLanguage
+                : targetLanguage || 'fa'
+            }
+            disabled={busy}
+            onChange={(e) => void persistTargetLanguage(e.target.value)}
+          >
+            {!isKnownTargetLanguage(targetLanguage) && targetLanguage ? (
+              <option value={targetLanguage}>{targetLanguage}</option>
+            ) : null}
+            {TARGET_LANGUAGE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {t(lang, opt.labelKey)}
+              </option>
+            ))}
+          </select>
+        </Field>
       </section>
 
       <div className="flex flex-col gap-2" role="group" aria-label={t(lang, 'popupTitle')}>
